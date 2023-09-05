@@ -9,12 +9,7 @@ import Admin from "../models/admin.js";
 router.get("/", async (req, res) => {
   //const admins = await Admin.findAll();
   //res.status(200).send(JSON.stringify(admins,null,2));
-  try {
-    await sequelize.authenticate();
-    res.status(200).send(`OK`);
-  } catch (error) {
-    res.status(200).send(`BD ERROR ${error}`);
-  }
+  res.status(200).send(`ENV ${JSON.stringify(process.env,null,2)}`);
 });
 
 router.post("/login",login);
