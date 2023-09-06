@@ -12,10 +12,6 @@ const Paciente = sequelize.define('Paciente',{
         type: DataTypes.INTEGER,
         allowNull: false,
     },
-    Id_Habitacion: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-    },
     Edad: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -40,9 +36,10 @@ const Paciente = sequelize.define('Paciente',{
     Correo: {
         type: DataTypes.STRING(50),
         allowNull: false,
+        unique:true
     },
     Password: {
-        type: DataTypes.STRING(50),
+        type: DataTypes.STRING,
         allowNull: false,
     },
     Domicilio: {
