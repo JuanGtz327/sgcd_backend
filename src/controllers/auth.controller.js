@@ -5,6 +5,13 @@ import { generateToken } from "../libs/jwt.js";
 export const signup = async (req, res) => {
   const { ...parametros } = req.body;
   try {
+    if(!parametros.Password)
+      return res.status(400).json({message:"Contraseña no ingresada"});
+
+    const doctorFound = await Doctor.findOne({ where: { Correo:parametros.Correo } });
+    if (doctorFound) 
+      return res.status(400).json({ message: "La direccion de correo ya esta en uso" });
+
     const passwordHash = await bcrypt.hash(parametros.Password, 10);
     parametros.Password = passwordHash;
 
@@ -18,7 +25,8 @@ export const signup = async (req, res) => {
     res.cookie("token", token);
     res.json(doctor);
   } catch (error) {
-    res.status(500).json({ message: error.errors[0].message });
+    console.log(error);
+    res.status(400).json({message:error});
   }
 };
 
