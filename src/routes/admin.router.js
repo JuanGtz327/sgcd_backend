@@ -25,7 +25,6 @@ router.post("/addDoctor",authRequired, async (req, res) => {
 
         res.json(doctor);
     } catch (error) {
-        console.log(error);
         res.status(500).json({ message: error });
     }
 });
@@ -53,7 +52,6 @@ router.put("/editDoctor/:idDoc",authRequired, async (req, res) => {
     const doctor = await Doctor.findByPk(idDoc)
     if(!doctor)
         return res.status(404).send({message:"Doctor not found"})
-    console.log(doctor.Id_Doctor);
     const updatedDoctor = await Doctor.update(parametros,{where:{Id_Doctor:doctor.Id_Doctor}})
     res.status(200).send(updatedDoctor);
 });
@@ -79,7 +77,6 @@ router.post("/addPatient",authRequired, async (req, res) => {
 
         res.json(patient);
     } catch (error) {
-        console.log(error);
         res.status(500).json({ message: error });
     }
 });
@@ -107,7 +104,6 @@ router.put("/editPatient/:idPat",authRequired, async (req, res) => {
     const patient = await Paciente.findByPk(idPat)
     if(!patient)
         return res.status(404).send({message:"Patient not found"})
-    console.log(patient.Id_Paciente);
     const updatedPatient = await Paciente.update(parametros,{where:{Id_Paciente:patient.Id_Paciente}})
     res.status(200).send(updatedPatient);
 });
