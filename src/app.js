@@ -11,7 +11,8 @@ const app = express();
 
 app.use(cors({
     origin: process.env.FRONT_URL || 'http://localhost:5173',
-    credentials: true
+    credentials: true,
+    sameSite: 'none'
 }))
 
 app.use(morgan('dev'))
