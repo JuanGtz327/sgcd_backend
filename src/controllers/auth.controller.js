@@ -1,17 +1,21 @@
 import Doctor from "../models/doctor.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../libs/jwt.js";
-import jwt from 'jsonwebtoken'
+import jwt from "jsonwebtoken";
 
 export const signup = async (req, res) => {
   const { ...parametros } = req.body;
   try {
-    if(!parametros.Password)
-      return res.status(400).json({message:"Contraseña no ingresada"});
+    if (!parametros.Password)
+      return res.status(400).json({ message: "Contraseña no ingresada" });
 
-    const doctorFound = await Doctor.findOne({ where: { Correo:parametros.Correo } });
-    if (doctorFound) 
-      return res.status(400).json({ message: "La direccion de correo ya esta en uso" });
+    const doctorFound = await Doctor.findOne({
+      where: { Correo: parametros.Correo },
+    });
+    if (doctorFound)
+      return res
+        .status(400)
+        .json({ message: "La direccion de correo ya esta en uso" });
 
     const passwordHash = await bcrypt.hash(parametros.Password, 10);
     parametros.Password = passwordHash;
@@ -23,14 +27,14 @@ export const signup = async (req, res) => {
       id: doctor.Id_Doctor,
     });
 
-    res.cookie("token", token, {sameSite: 'none'}  );
+    res.cookie("token", token, { sameSite: "none", secure: true });
     res.json({
       id: doctor.Id_Doctor,
       email: doctor.Correo,
       name: doctor.Nombre,
     });
   } catch (error) {
-    res.status(400).json({message:error});
+    res.status(400).json({ message: error });
   }
 };
 
@@ -56,7 +60,7 @@ export const login = async (req, res) => {
       id: doctorFound.Id_Doctor,
     });
 
-    res.cookie("token", token, {sameSite: 'none'});
+    res.cookie("token", token, { sameSite: "none", secure: true });
 
     res.json({
       id: doctorFound.Id_Doctor,
@@ -71,29 +75,30 @@ export const login = async (req, res) => {
 export const logout = (req, res) => {
   res.cookie("token", "", {
     expires: new Date(0),
-    sameSite: 'none'
+    sameSite: "none",
+    secure: true,
   });
   return res.sendStatus(200);
 };
 
-export const verifyToken = async (req,res)=>{
+export const verifyToken = async (req, res) => {
   const token = req.cookies.token;
-  if(!token) return res.status(401).json({message:"No hay token"});
+  if (!token) return res.status(401).json({ message: "No hay token" });
 
-  jwt.verify(token,process.env.JWT_SECRET,async (err,user)=>{
-    if(err) return res.status(401).json({message:"Token invalido"});
+  jwt.verify(token, process.env.JWT_SECRET, async (err, user) => {
+    if (err) return res.status(401).json({ message: "Token invalido" });
 
-    const userFound = await Doctor.findByPk(user.id)
+    const userFound = await Doctor.findByPk(user.id);
 
-    if(!userFound) return res.status(401).json({message:"No autorizado"});
+    if (!userFound) return res.status(401).json({ message: "No autorizado" });
 
     return res.status(200).json({
-      id:userFound.Id_Doctor,
-      email:userFound.Correo,
-      name:userFound.Nombre
+      id: userFound.Id_Doctor,
+      email: userFound.Correo,
+      name: userFound.Nombre,
     });
   });
-}
+};
 
 export const profile = (req, res) => {
   res.status(200).send(req.user);
