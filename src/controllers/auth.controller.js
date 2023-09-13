@@ -23,7 +23,7 @@ export const signup = async (req, res) => {
       id: doctor.Id_Doctor,
     });
 
-    res.cookie("token", token);
+    res.cookie("token", token, {sameSite: 'none'}  );
     res.json({
       id: doctor.Id_Doctor,
       email: doctor.Correo,
@@ -56,7 +56,7 @@ export const login = async (req, res) => {
       id: doctorFound.Id_Doctor,
     });
 
-    res.cookie("token", token);
+    res.cookie("token", token, {sameSite: 'none'});
 
     res.json({
       id: doctorFound.Id_Doctor,
@@ -71,6 +71,7 @@ export const login = async (req, res) => {
 export const logout = (req, res) => {
   res.cookie("token", "", {
     expires: new Date(0),
+    sameSite: 'none'
   });
   return res.sendStatus(200);
 };
