@@ -32,6 +32,7 @@ export const signup = async (req, res) => {
       id: doctor.Id_Doctor,
       email: doctor.Correo,
       name: doctor.Nombre,
+      token: token,
     });
   } catch (error) {
     res.status(400).json({ message: error });
@@ -66,6 +67,7 @@ export const login = async (req, res) => {
       id: doctorFound.Id_Doctor,
       email: doctorFound.Correo,
       name: doctorFound.Nombre,
+      token: token,
     });
   } catch (error) {
     res.status(500).json({ message: error });
@@ -82,7 +84,7 @@ export const logout = (req, res) => {
 };
 
 export const verifyToken = async (req, res) => {
-  const token = req.cookies.token;
+  const token = req.body.token;
   if (!token) return res.status(401).json({ message: "No hay token" });
 
   jwt.verify(token, process.env.JWT_SECRET, async (err, user) => {
