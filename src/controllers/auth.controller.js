@@ -98,6 +98,7 @@ export const verifyToken = async (req, res) => {
       id: userFound.Id_Doctor,
       email: userFound.Correo,
       name: userFound.Nombre,
+      token: token,
     });
   });
 };

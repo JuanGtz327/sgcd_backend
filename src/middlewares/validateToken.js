@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 
 export const authRequired = (req, res, next) => {
-  const { token } = req.cookies;
+  const { token } = req.body.User;
 
   if (!token) return res.status(401).json({ message: "No token provided" });
 
