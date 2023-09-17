@@ -103,7 +103,7 @@ router.put("/editPatient/:idPat", authRequired, async (req, res) => {
     return res.status(400).send({ message: "You must provide an Id_Paciente" });
   const patient = await Paciente.findByPk(idPat);
   if (!patient) return res.status(404).send({ message: "Patient not found" });
-  const updatedPatient = await Paciente.update(parametros, {
+  const updatedPatient = await Paciente.update(parametros.Patient, {
     where: { Id_Paciente: patient.Id_Paciente },
   });
   res.status(200).send(updatedPatient);
