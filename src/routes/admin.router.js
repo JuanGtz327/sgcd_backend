@@ -7,6 +7,7 @@ import { authRequired } from "../middlewares/validateToken.js";
 import Admin from "../models/admin.js";
 import Doctor from "../models/doctor.js";
 import Paciente from "../models/paciente.js";
+import Cita from "../models/cita.js";
 
 router.get("/", async (req, res) => {
   const admins = await Admin.findAll();
@@ -115,6 +116,27 @@ router.delete("/deletePatient/:idPat", authRequired, async (req, res) => {
   if (!patient) return res.status(404).send({ message: "Patient not found" });
   await patient.destroy();
   res.status(200).json({ message: `Patient ${idPat} deleted` });
+});
+
+// Handle Citas
+
+router.post("/addCita", authRequired, async (req, res) => {
+  const { ...parametros } = req.body;
+  const { id } = req.user;
+  try {
+
+    parametros.Id_Doctor = id;
+    const cita = await Cita.create(parametros);
+
+    res.json(cita);
+  } catch (error) {
+    res.status(500).json({ message: error });
+  }
+});
+
+router.get("/getCitas", authRequired, async (req, res) => {
+  const appointments = await Cita.findAll();
+  res.status(200).json(appointments);
 });
 
 export default router;

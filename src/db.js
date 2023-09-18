@@ -1,6 +1,6 @@
 import { Sequelize } from "sequelize";
 
-const debugging = process.env.ENVIROMENT=='dev'?true:false
+const debugging = process.env.ENVIROMENT == "dev" ? true : false;
 
 const sequelize = new Sequelize(
   process.env.DB_NAME,
@@ -11,6 +11,17 @@ const sequelize = new Sequelize(
     port: process.env.DB_PORT,
     dialect: "mysql",
     logging: debugging,
+    timezone: "-06:00",
+    dialectOptions: {
+      useUTC: false, // for reading from database
+      dateStrings: true,
+      typeCast(field, next) {
+        if (field.type === "DATETIME") {
+          return field.string();
+        }
+        return next();
+      },
+    },
   }
 );
 
