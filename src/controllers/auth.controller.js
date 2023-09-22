@@ -1,4 +1,5 @@
-import Doctor from "../models/doctor.js";
+import User from "../models/user.js";
+import Clinica from "../models/clinica.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../libs/jwt.js";
 import jwt from "jsonwebtoken";
@@ -9,29 +10,37 @@ export const signup = async (req, res) => {
     if (!parametros.Password)
       return res.status(400).json({ message: "Contraseña no ingresada" });
 
-    const doctorFound = await Doctor.findOne({
+    const userFound = await User.findOne({
       where: { Correo: parametros.Correo },
     });
-    if (doctorFound)
+    if (userFound)
       return res
         .status(400)
         .json({ message: "La direccion de correo ya esta en uso" });
 
     const passwordHash = await bcrypt.hash(parametros.Password, 10);
     parametros.Password = passwordHash;
+    parametros.is_admin = true;
 
-    const doctor = await Doctor.create(parametros);
+    //Creacion de la clinica con nombre temporal
+    const clinica = await Clinica.create({ Nombre: parametros.Correo.split("@")[0] });
+
+    //Creacion del usuario con la clinica temporal
+    parametros.idClinica = clinica.id;
+
+    const user = await User.create(parametros);
 
     const token = await generateToken({
-      email: doctor.Correo,
-      id: doctor.Id_Doctor,
+      email: user.Correo,
+      id: user.id,
+      is_admin: user.is_admin,
     });
 
     res.cookie("token", token, { sameSite: "none", secure: true });
     res.json({
-      id: doctor.Id_Doctor,
-      email: doctor.Correo,
-      name: doctor.Nombre,
+      id: user.id,
+      email: user.Correo,
+      is_admin: user.is_admin,
       token: token,
     });
   } catch (error) {
@@ -42,14 +51,14 @@ export const signup = async (req, res) => {
 export const login = async (req, res) => {
   const { Correo, Password } = req.body;
   try {
-    const doctorFound = await Doctor.findOne({ where: { Correo } });
+    const userFound = await User.findOne({ where: { Correo } });
 
-    if (!doctorFound) {
-      res.status(400).json({ message: "Doctor no encontrado" });
+    if (!userFound) {
+      res.status(400).json({ message: "Usuario no encontrado" });
       return;
     }
 
-    const isMatch = await bcrypt.compare(Password, doctorFound.Password);
+    const isMatch = await bcrypt.compare(Password, userFound.Password);
 
     if (!isMatch) {
       res.status(400).json({ message: "Contraseña incorrecta" });
@@ -57,16 +66,17 @@ export const login = async (req, res) => {
     }
 
     const token = await generateToken({
-      email: doctorFound.Correo,
-      id: doctorFound.Id_Doctor,
+      email: userFound.Correo,
+      id: userFound.id,
+      is_admin: userFound.is_admin,
     });
 
     res.cookie("token", token, { sameSite: "none", secure: true });
 
     res.json({
-      id: doctorFound.Id_Doctor,
-      email: doctorFound.Correo,
-      name: doctorFound.Nombre,
+      id: userFound.id,
+      email: userFound.Correo,
+      is_admin: userFound.is_admin,
       token: token,
     });
   } catch (error) {
@@ -90,19 +100,17 @@ export const verifyToken = async (req, res) => {
   jwt.verify(token, process.env.JWT_SECRET, async (err, user) => {
     if (err) return res.status(401).json({ message: "Token invalido" });
 
-    const userFound = await Doctor.findByPk(user.id);
+    const userFound = await User.findOne({
+      where: { Correo: user.email },
+    });
 
     if (!userFound) return res.status(401).json({ message: "No autorizado" });
 
     return res.status(200).json({
-      id: userFound.Id_Doctor,
-      email: userFound.Correo,
-      name: userFound.Nombre,
+      id: user.id,
+      email: user.email,
+      is_admin: user.is_admin,
       token: token,
     });
   });
-};
-
-export const profile = (req, res) => {
-  res.status(200).send(req.user);
 };

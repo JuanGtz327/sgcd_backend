@@ -11,7 +11,7 @@ const sequelize = new Sequelize(
     port: process.env.DB_PORT,
     dialect: "mysql",
     logging: debugging,
-    timezone: "America/Mexico_City",
+    timezone: "-06:00",
     dialectOptions: {
       useUTC: false, // for reading from database
       dateStrings: true,
