@@ -34,6 +34,7 @@ export const signup = async (req, res) => {
       email: user.Correo,
       id: user.id,
       is_admin: user.is_admin,
+      idClinica: user.idClinica,
     });
 
     res.cookie("token", token, { sameSite: "none", secure: true });
@@ -42,6 +43,7 @@ export const signup = async (req, res) => {
       email: user.Correo,
       is_admin: user.is_admin,
       token: token,
+      idClinica: user.idClinica,
     });
   } catch (error) {
     res.status(400).json({ message: error });
@@ -69,6 +71,7 @@ export const login = async (req, res) => {
       email: userFound.Correo,
       id: userFound.id,
       is_admin: userFound.is_admin,
+      idClinica: userFound.idClinica,
     });
 
     res.cookie("token", token, { sameSite: "none", secure: true });
@@ -78,6 +81,7 @@ export const login = async (req, res) => {
       email: userFound.Correo,
       is_admin: userFound.is_admin,
       token: token,
+      idClinica: userFound.idClinica,
     });
   } catch (error) {
     res.status(500).json({ message: error });
@@ -111,6 +115,7 @@ export const verifyToken = async (req, res) => {
       email: user.email,
       is_admin: user.is_admin,
       token: token,
+      idClinica: user.idClinica,
     });
   });
 };

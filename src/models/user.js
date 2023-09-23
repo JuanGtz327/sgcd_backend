@@ -1,7 +1,9 @@
-import {DataTypes} from 'sequelize'
+import {DataTypes,Model} from 'sequelize'
 import sequelize from '../db.js'
 
-const User = sequelize.define('User',{
+class User extends Model{}
+
+User.init({
     id: {
         type: DataTypes.INTEGER,
         allowNull: true,
@@ -19,13 +21,54 @@ const User = sequelize.define('User',{
     is_admin: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
+        defaultValue: false,
     },
     idClinica: {
         type: DataTypes.INTEGER,
         allowNull: false,
     },
 },{
-    tableName: "User"
+    tableName: "User",
+    sequelize,
+    modelName: "User"
 })
+
+export class Doctor extends Model{}
+
+Doctor.init({
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+        allowNull: false,
+    },
+    Nombre: {
+        type: DataTypes.STRING(25),
+        allowNull: false,
+    },
+    ApellidoM: {
+        type: DataTypes.STRING(25),
+        allowNull: false,
+    },
+    ApellidoP: {
+        type: DataTypes.STRING(25),
+        allowNull: false,
+    },
+    Especialidad: {
+        type: DataTypes.STRING(25),
+        allowNull: false,
+    },
+    Cedula: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    }
+},{
+    tableName: "Doctor",
+    sequelize,
+    modelName: "Doctor"
+})
+
+User.belongsTo(Doctor, { foreignKey: 'id' });
+Doctor.hasOne(User, { foreignKey: 'id' });
 
 export default User
