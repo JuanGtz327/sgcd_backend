@@ -134,13 +134,8 @@ router.put("/editDoctor/:idDoc", authRequired, async (req, res) => {
 router.delete("/deleteDoctor/:idDoc", authRequired, async (req, res) => {
   const { idDoc } = req.params;
 
-  const doctor = await Doctor.findByPk(idDoc);
-  if (!doctor) return res.status(404).send({ message: "Doctor not found" });
-  await doctor.destroy();
-
-  const user = await User.findOne({ where: { id: idDoc } });
-  if (!user) return res.status(404).send({ message: "User not found" });
-  await user.destroy();
+  await User.destroy({ where: { id: idDoc } });
+  await Doctor.destroy({ where: { id: idDoc } });
 
   res.status(200).json({ message: `Doctor ${idDoc} deleted` });
 });
