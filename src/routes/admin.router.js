@@ -4,7 +4,7 @@ const router = express.Router();
 import bcrypt from "bcryptjs";
 import { authRequired } from "../middlewares/validateToken.js";
 
-import User, { Doctor, Paciente } from "../models/models.js";
+import User, { Doctor, Paciente, DocPac } from "../models/models.js";
 import Cita from "../models/cita.js";
 
 router.get("/", async (req, res) => {});
@@ -74,10 +74,10 @@ router.put("/editDoctor/:idDoc", authRequired, async (req, res) => {
   if (!idDoc)
     return res.status(400).send({ message: "You must provide an Id_Doctor" });
 
-  const doctor = await Doctor.findOne({ where: { id:idDoc } });
+  const doctor = await Doctor.findOne({ where: { id: idDoc } });
   if (!doctor) return res.status(404).send({ message: "Doctor not found" });
   const updatedDoctor = await Doctor.update(parametros, {
-    where: { id:idDoc },
+    where: { id: idDoc },
   });
 
   //Actualizar el usuario con el correo del doctor si se paso como parametro
@@ -122,9 +122,12 @@ router.delete("/deleteDoctor/:idDoc", authRequired, async (req, res) => {
 
 router.post("/addPatient", authRequired, async (req, res) => {
   const { ...parametros } = req.body;
-  const { idClinica, id } = req.user;
+  const { idClinica, idDoctor } = req.user;
 
   try {
+    if (!idDoctor)
+      return res.status(400).send({ message: "You must provide an Id_Doctor" });
+
     const userExists = await User.findOne({
       where: { Correo: parametros.Correo },
     });
@@ -140,23 +143,34 @@ router.post("/addPatient", authRequired, async (req, res) => {
     const userPayload = {
       Correo: parametros.Correo,
       Password: passwordHash,
-      idClinica: idClinica
+      idClinica: idClinica,
+      is_doctor: false,
     };
 
-    await User.create(userPayload);
+    const user = await User.create(userPayload);
 
     //Guardar el paciente en la tabla de pacientes
 
     const patientPayload = {
+      idUser: user.id,
       Nombre: parametros.Nombre,
       ApellidoM: parametros.ApellidoM,
       ApellidoP: parametros.ApellidoP,
       Edad: parametros.Edad,
       Genero: parametros.Genero,
-      Domicilio: parametros.Domicilio
+      Domicilio: parametros.Domicilio,
     };
 
     const patient = await Paciente.create(patientPayload);
+
+    //Guardar las referencias en la tabla de DocPac
+
+    const docPacPayload = {
+      idDoctor,
+      idPaciente: patient.id,
+    };
+
+    await DocPac.create(docPacPayload);
 
     res.json(patient);
   } catch (error) {
@@ -165,7 +179,23 @@ router.post("/addPatient", authRequired, async (req, res) => {
 });
 
 router.get("/getPatients", authRequired, async (req, res) => {
-  const patients = await Paciente.findAll();
+  const patients = await User.findAll({
+    where: { is_doctor: false, idClinica: req.user.idClinica },
+    attributes: ["Correo"],
+    include: [
+      {
+        model: Paciente,
+        required: true,
+        include: [
+          {
+            model: DocPac,
+            where: { idDoctor: req.user.idDoctor },
+            required: true,
+          },
+        ],
+      },
+    ],
+  });
   res.status(200).json(patients);
 });
 
@@ -183,19 +213,47 @@ router.put("/editPatient/:idPat", authRequired, async (req, res) => {
   const { idPat } = req.params;
   if (!idPat)
     return res.status(400).send({ message: "You must provide an Id_Paciente" });
-  const patient = await Paciente.findByPk(idPat);
-  if (!patient) return res.status(404).send({ message: "Patient not found" });
-  const updatedPatient = await Paciente.update(parametros.Patient, {
-    where: { Id_Paciente: patient.Id_Paciente },
+
+  const paciente = await Paciente.findOne({ where: { id: idPat } });
+  if (!paciente) return res.status(404).send({ message: "Paciente not found" });
+  const updatedPaciente = await Paciente.update(parametros, {
+    where: { id: idPat },
   });
-  res.status(200).send(updatedPatient);
+
+  //Actualizar el usuario con el correo del paciente si se paso como parametro
+
+  if (parametros.Correo) {
+    //Consultar si el email ya esta en uso
+    const userExists = await User.findOne({
+      where: { Correo: parametros.Correo },
+    });
+    if (userExists)
+      return res
+        .status(400)
+        .json({ message: "La direccion de correo ya esta en uso" });
+
+    const user = await User.findOne({ where: { id: paciente.idUser } });
+    if (!user) return res.status(404).send({ message: "User not found" });
+    await User.update(
+      { Correo: parametros.Correo },
+      { where: { id: user.id } }
+    );
+  }
+
+  if (parametros.Password) {
+    const passwordHash = await bcrypt.hash(parametros.Password, 10);
+    const user = await User.findOne({ where: { id: paciente.idUser } });
+    if (!user) return res.status(404).send({ message: "User not found" });
+    await User.update({ Password: passwordHash }, { where: { id: user.id } });
+  }
+
+  res.status(200).send(updatedPaciente);
 });
 
 router.delete("/deletePatient/:idPat", authRequired, async (req, res) => {
   const { idPat } = req.params;
-  const patient = await Paciente.findByPk(idPat);
-  if (!patient) return res.status(404).send({ message: "Patient not found" });
-  await patient.destroy();
+  await User.destroy({ where: { id: idPat } });
+
   res.status(200).json({ message: `Patient ${idPat} deleted` });
 });
 

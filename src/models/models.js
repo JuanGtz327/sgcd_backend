@@ -154,10 +154,40 @@ Paciente.init(
   }
 );
 
+export class DocPac extends Model {}
+
+DocPac.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+      allowNull: false,
+    },
+    idDoctor: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    idPaciente: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+  },
+  {
+    tableName: "DocPac",
+    sequelize,
+    modelName: "DocPac",
+  }
+);
+
+
 User.belongsTo(Clinica, { foreignKey: "idClinica" });
 Clinica.hasMany(User, { foreignKey: "idClinica" });
 
 User.hasOne(Doctor, { foreignKey: "idUser", onDelete: "CASCADE" });
 User.hasOne(Paciente, { foreignKey: "idUser", onDelete: "CASCADE" });
+
+Doctor.hasOne(DocPac, { foreignKey: "idDoctor", onDelete: "CASCADE" });
+Paciente.hasOne(DocPac, { foreignKey: "idPaciente", onDelete: "CASCADE" });
 
 export default User;
