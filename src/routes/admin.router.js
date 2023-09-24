@@ -4,7 +4,7 @@ const router = express.Router();
 import bcrypt from "bcryptjs";
 import { authRequired } from "../middlewares/validateToken.js";
 
-import User, { Doctor, Paciente } from "../models/user.js";
+import User, { Doctor, Paciente } from "../models/models.js";
 import Cita from "../models/cita.js";
 
 router.get("/", async (req, res) => {});
@@ -74,10 +74,10 @@ router.put("/editDoctor/:idDoc", authRequired, async (req, res) => {
   if (!idDoc)
     return res.status(400).send({ message: "You must provide an Id_Doctor" });
 
-  const doctor = await Doctor.findOne({ where: { idUser: idDoc } });
+  const doctor = await Doctor.findOne({ where: { id:idDoc } });
   if (!doctor) return res.status(404).send({ message: "Doctor not found" });
   const updatedDoctor = await Doctor.update(parametros, {
-    where: { idUser: idDoc },
+    where: { id:idDoc },
   });
 
   //Actualizar el usuario con el correo del doctor si se paso como parametro
@@ -92,7 +92,7 @@ router.put("/editDoctor/:idDoc", authRequired, async (req, res) => {
         .status(400)
         .json({ message: "La direccion de correo ya esta en uso" });
 
-    const user = await User.findOne({ where: { id: idDoc } });
+    const user = await User.findOne({ where: { id: doctor.idUser } });
     if (!user) return res.status(404).send({ message: "User not found" });
     await User.update(
       { Correo: parametros.Correo },
@@ -102,7 +102,7 @@ router.put("/editDoctor/:idDoc", authRequired, async (req, res) => {
 
   if (parametros.Password) {
     const passwordHash = await bcrypt.hash(parametros.Password, 10);
-    const user = await User.findOne({ where: { id: idDoc } });
+    const user = await User.findOne({ where: { id: doctor.idUser } });
     if (!user) return res.status(404).send({ message: "User not found" });
     await User.update({ Password: passwordHash }, { where: { id: user.id } });
   }

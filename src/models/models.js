@@ -69,10 +69,14 @@ export class Doctor extends Model {}
 
 Doctor.init(
   {
-    idUser: {
+    id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
+      allowNull: false,
+    },
+    idUser: {
+      type: DataTypes.INTEGER,
       allowNull: false,
     },
     Nombre: {
@@ -107,13 +111,13 @@ export class Paciente extends Model {}
 
 Paciente.init(
   {
-    idUser: {
+    id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
       allowNull: false,
     },
-    idDoctor: {
+    idUser: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
@@ -155,7 +159,5 @@ Clinica.hasMany(User, { foreignKey: "idClinica" });
 
 User.hasOne(Doctor, { foreignKey: "idUser", onDelete: "CASCADE" });
 User.hasOne(Paciente, { foreignKey: "idUser", onDelete: "CASCADE" });
-
-Paciente.belongsTo(Doctor, { foreignKey: "idDoctor" });
 
 export default User;

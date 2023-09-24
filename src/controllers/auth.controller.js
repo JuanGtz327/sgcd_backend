@@ -1,4 +1,4 @@
-import User, {Clinica} from "../models/user.js";
+import User, {Clinica} from "../models/models.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../libs/jwt.js";
 import jwt from "jsonwebtoken";
