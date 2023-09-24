@@ -133,6 +133,18 @@ router.post("/addPatient", authRequired, async (req, res) => {
         .status(400)
         .json({ message: "La direccion de correo ya esta en uso" });
 
+    //Guardar el paciente en la tabla de usuarios
+
+    const passwordHash = await bcrypt.hash(parametros.Password, 10);
+
+    const userPayload = {
+      Correo: parametros.Correo,
+      Password: passwordHash,
+      idClinica: idClinica
+    };
+
+    await User.create(userPayload);
+
     //Guardar el paciente en la tabla de pacientes
 
     const patientPayload = {
@@ -141,24 +153,10 @@ router.post("/addPatient", authRequired, async (req, res) => {
       ApellidoP: parametros.ApellidoP,
       Edad: parametros.Edad,
       Genero: parametros.Genero,
-      Domicilio: parametros.Domicilio,
-      idDoctor: id,
+      Domicilio: parametros.Domicilio
     };
 
     const patient = await Paciente.create(patientPayload);
-
-    //Guardar el paciente en la tabla de usuarios
-
-    const passwordHash = await bcrypt.hash(parametros.Password, 10);
-
-    const userPayload = {
-      Correo: parametros.Correo,
-      Password: passwordHash,
-      idClinica: idClinica,
-      id: patient.id,
-    };
-
-    await User.create(userPayload);
 
     res.json(patient);
   } catch (error) {

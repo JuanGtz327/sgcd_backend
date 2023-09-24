@@ -1,4 +1,4 @@
-import User, {Clinica} from "../models/models.js";
+import User, { Clinica, Doctor } from "../models/models.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../libs/jwt.js";
 import jwt from "jsonwebtoken";
@@ -22,7 +22,9 @@ export const signup = async (req, res) => {
     parametros.is_admin = true;
 
     //Creacion de la clinica con nombre temporal
-    const clinica = await Clinica.create({ Nombre: parametros.Correo.split("@")[0] });
+    const clinica = await Clinica.create({
+      Nombre: parametros.Correo.split("@")[0],
+    });
 
     //Creacion del usuario con la clinica temporal
     parametros.idClinica = clinica.id;
@@ -68,18 +70,28 @@ export const login = async (req, res) => {
       return;
     }
 
-    const token = await generateToken({
+    let tokenPayload = {
       email: userFound.Correo,
       id: userFound.id,
       is_admin: userFound.is_admin,
       is_doctor: userFound.is_doctor,
       idClinica: userFound.idClinica,
-    });
+    };
+
+    if (userFound.is_doctor) {
+      const doctorFound = await Doctor.findOne({ where: { idUser: userFound.id } });
+      if (doctorFound) {
+        tokenPayload.idDoctor = doctorFound.id;
+      }
+    }
+
+    const token = await generateToken(tokenPayload);
 
     res.cookie("token", token, { sameSite: "none", secure: true });
 
     res.json({
       id: userFound.id,
+      idDoctor: tokenPayload.idDoctor,
       email: userFound.Correo,
       is_admin: userFound.is_admin,
       is_doctor: userFound.is_doctor,
@@ -115,6 +127,7 @@ export const verifyToken = async (req, res) => {
 
     return res.status(200).json({
       id: user.id,
+      idDoctor: user.idDoctor,
       email: user.email,
       is_admin: user.is_admin,
       is_doctor: user.is_doctor,
