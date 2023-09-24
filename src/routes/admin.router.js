@@ -1,19 +1,13 @@
 import express from "express";
-import { Sequelize } from "sequelize";
 const router = express.Router();
 
 import bcrypt from "bcryptjs";
 import { authRequired } from "../middlewares/validateToken.js";
 
-import Admin from "../models/admin.js";
-import User, { Doctor } from "../models/user.js";
-import Paciente from "../models/paciente.js";
+import User, { Doctor, Paciente } from "../models/user.js";
 import Cita from "../models/cita.js";
 
-router.get("/", async (req, res) => {
-  const admins = await Admin.findAll();
-  res.status(200).send(JSON.stringify(admins, null, 2));
-});
+router.get("/", async (req, res) => {});
 
 // Handle doctors
 
@@ -29,9 +23,22 @@ router.post("/addDoctor", authRequired, async (req, res) => {
         .status(400)
         .json({ message: "La direccion de correo ya esta en uso" });
 
+    //Guardar el doctor en la tabla de usuarios
+
+    const passwordHash = await bcrypt.hash(parametros.Password, 10);
+
+    const userPayload = {
+      Correo: parametros.Correo,
+      Password: passwordHash,
+      idClinica: idClinica,
+    };
+
+    const user = await User.create(userPayload);
+
     //Guardar el doctor en la tabla de doctores
 
     const doctorPayload = {
+      idUser: user.id,
       Nombre: parametros.Nombre,
       ApellidoM: parametros.ApellidoM,
       ApellidoP: parametros.ApellidoP,
@@ -41,19 +48,6 @@ router.post("/addDoctor", authRequired, async (req, res) => {
 
     const doctor = await Doctor.create(doctorPayload);
 
-    //Guardar el doctor en la tabla de usuarios
-
-    const passwordHash = await bcrypt.hash(parametros.Password, 10);
-
-    const userPayload = {
-      Correo: parametros.Correo,
-      Password: passwordHash,
-      idClinica: idClinica,
-      id: doctor.id,
-    };
-
-    await User.create(userPayload);
-
     res.json(doctor);
   } catch (error) {
     res.status(500).json({ message: error });
@@ -61,15 +55,12 @@ router.post("/addDoctor", authRequired, async (req, res) => {
 });
 
 router.get("/getDoctors", authRequired, async (req, res) => {
-  const doctors = await Doctor.findAll({
+  const doctors = await User.findAll({
+    where: { is_doctor: true, idClinica: req.user.idClinica },
+    attributes: ["Correo"],
     include: [
       {
-        model: User,
-        attributes: ["Correo"],
-        where: {
-          id: Sequelize.col("Doctor.id"),
-          idClinica: req.user.idClinica,
-        },
+        model: Doctor,
         required: true,
       },
     ],
@@ -77,24 +68,16 @@ router.get("/getDoctors", authRequired, async (req, res) => {
   res.status(200).json(doctors);
 });
 
-router.get("/getDoctor/:idDoc", authRequired, async (req, res) => {
-  const { idDoc } = req.params;
-  if (!idDoc)
-    return res.status(400).send({ message: "You must provide an Id_Doctor" });
-  const doctor = await Doctor.findByPk(idDoc);
-  if (!doctor) return res.status(404).send({ message: "Doctor not found" });
-  res.status(200).json(doctor);
-});
-
 router.put("/editDoctor/:idDoc", authRequired, async (req, res) => {
   const { ...parametros } = req.body;
   const { idDoc } = req.params;
   if (!idDoc)
     return res.status(400).send({ message: "You must provide an Id_Doctor" });
-  const doctor = await Doctor.findByPk(idDoc);
+
+  const doctor = await Doctor.findOne({ where: { idUser: idDoc } });
   if (!doctor) return res.status(404).send({ message: "Doctor not found" });
   const updatedDoctor = await Doctor.update(parametros, {
-    where: { id: doctor.id },
+    where: { idUser: idDoc },
   });
 
   //Actualizar el usuario con el correo del doctor si se paso como parametro
@@ -109,7 +92,7 @@ router.put("/editDoctor/:idDoc", authRequired, async (req, res) => {
         .status(400)
         .json({ message: "La direccion de correo ya esta en uso" });
 
-    const user = await User.findOne({ where: { id: doctor.id } });
+    const user = await User.findOne({ where: { id: idDoc } });
     if (!user) return res.status(404).send({ message: "User not found" });
     await User.update(
       { Correo: parametros.Correo },
@@ -119,14 +102,10 @@ router.put("/editDoctor/:idDoc", authRequired, async (req, res) => {
 
   if (parametros.Password) {
     const passwordHash = await bcrypt.hash(parametros.Password, 10);
-    const user = await User.findOne({ where: { id: doctor.id } });
+    const user = await User.findOne({ where: { id: idDoc } });
     if (!user) return res.status(404).send({ message: "User not found" });
-    await User.update(
-      { Password: passwordHash },
-      { where: { id: user.id } }
-    );
+    await User.update({ Password: passwordHash }, { where: { id: user.id } });
   }
-
 
   res.status(200).send(updatedDoctor);
 });
@@ -135,7 +114,6 @@ router.delete("/deleteDoctor/:idDoc", authRequired, async (req, res) => {
   const { idDoc } = req.params;
 
   await User.destroy({ where: { id: idDoc } });
-  await Doctor.destroy({ where: { id: idDoc } });
 
   res.status(200).json({ message: `Doctor ${idDoc} deleted` });
 });
@@ -143,14 +121,44 @@ router.delete("/deleteDoctor/:idDoc", authRequired, async (req, res) => {
 // Handle Patients
 
 router.post("/addPatient", authRequired, async (req, res) => {
-  const { ...parametros } = req.body.Patient;
-  const { id } = req.user;
-  try {
-    const passwordHash = await bcrypt.hash(parametros.Password, 10);
-    parametros.Password = passwordHash;
-    parametros.Id_Doctor = id;
+  const { ...parametros } = req.body;
+  const { idClinica, id } = req.user;
 
-    const patient = await Paciente.create(parametros);
+  try {
+    const userExists = await User.findOne({
+      where: { Correo: parametros.Correo },
+    });
+    if (userExists)
+      return res
+        .status(400)
+        .json({ message: "La direccion de correo ya esta en uso" });
+
+    //Guardar el paciente en la tabla de pacientes
+
+    const patientPayload = {
+      Nombre: parametros.Nombre,
+      ApellidoM: parametros.ApellidoM,
+      ApellidoP: parametros.ApellidoP,
+      Edad: parametros.Edad,
+      Genero: parametros.Genero,
+      Domicilio: parametros.Domicilio,
+      idDoctor: id,
+    };
+
+    const patient = await Paciente.create(patientPayload);
+
+    //Guardar el paciente en la tabla de usuarios
+
+    const passwordHash = await bcrypt.hash(parametros.Password, 10);
+
+    const userPayload = {
+      Correo: parametros.Correo,
+      Password: passwordHash,
+      idClinica: idClinica,
+      id: patient.id,
+    };
+
+    await User.create(userPayload);
 
     res.json(patient);
   } catch (error) {

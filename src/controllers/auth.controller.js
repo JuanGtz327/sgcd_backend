@@ -1,5 +1,4 @@
-import User from "../models/user.js";
-import Clinica from "../models/clinica.js";
+import User, {Clinica} from "../models/user.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../libs/jwt.js";
 import jwt from "jsonwebtoken";
@@ -34,6 +33,7 @@ export const signup = async (req, res) => {
       email: user.Correo,
       id: user.id,
       is_admin: user.is_admin,
+      is_doctor: user.is_doctor,
       idClinica: user.idClinica,
     });
 
@@ -42,6 +42,7 @@ export const signup = async (req, res) => {
       id: user.id,
       email: user.Correo,
       is_admin: user.is_admin,
+      is_doctor: user.is_doctor,
       token: token,
       idClinica: user.idClinica,
     });
@@ -71,6 +72,7 @@ export const login = async (req, res) => {
       email: userFound.Correo,
       id: userFound.id,
       is_admin: userFound.is_admin,
+      is_doctor: userFound.is_doctor,
       idClinica: userFound.idClinica,
     });
 
@@ -80,6 +82,7 @@ export const login = async (req, res) => {
       id: userFound.id,
       email: userFound.Correo,
       is_admin: userFound.is_admin,
+      is_doctor: userFound.is_doctor,
       token: token,
       idClinica: userFound.idClinica,
     });
@@ -114,6 +117,7 @@ export const verifyToken = async (req, res) => {
       id: user.id,
       email: user.email,
       is_admin: user.is_admin,
+      is_doctor: user.is_doctor,
       token: token,
       idClinica: user.idClinica,
     });
