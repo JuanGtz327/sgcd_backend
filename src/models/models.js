@@ -180,6 +180,35 @@ DocPac.init(
   }
 );
 
+export class Cita extends Model {}
+
+Cita.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+      allowNull: false,
+    },
+    idDocPac: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    Fecha: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
+    Descripcion: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+    },
+  },
+  {
+    tableName: "Cita",
+    sequelize,
+    modelName: "Cita",
+  }
+);
 
 User.belongsTo(Clinica, { foreignKey: "idClinica" });
 Clinica.hasMany(User, { foreignKey: "idClinica" });
@@ -189,5 +218,7 @@ User.hasOne(Paciente, { foreignKey: "idUser", onDelete: "CASCADE" });
 
 Doctor.hasOne(DocPac, { foreignKey: "idDoctor", onDelete: "CASCADE" });
 Paciente.hasOne(DocPac, { foreignKey: "idPaciente", onDelete: "CASCADE" });
+
+DocPac.hasMany(Cita, { foreignKey: "idDocPac", onDelete: "CASCADE" });
 
 export default User;

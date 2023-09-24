@@ -1,10 +1,12 @@
 import sequelize from '../db.js'
 
-(async () => {
+const refreshDB = async () => {
   try {
     await sequelize.sync({ alter: true });
-    console.log('Base de datos sincronizada correctamente');
+    return 'Database refreshed';
   } catch (error) {
-    console.error('Error al sincronizar la base de datos:', error);
+    return JSON.stringify(error);
   }
-})();
+};
+
+export default refreshDB;

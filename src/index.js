@@ -1,7 +1,6 @@
 import 'dotenv/config'
 import app from './app.js'
 import sequelize,{connectedDB} from './db.js'
-import './libs/syncDB.js'
 
 connectedDB(sequelize)
 

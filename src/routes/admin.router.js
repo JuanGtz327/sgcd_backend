@@ -4,10 +4,13 @@ const router = express.Router();
 import bcrypt from "bcryptjs";
 import { authRequired } from "../middlewares/validateToken.js";
 
-import User, { Doctor, Paciente, DocPac } from "../models/models.js";
-import Cita from "../models/cita.js";
+import User, { Doctor, Paciente, DocPac, Cita } from "../models/models.js";
+import refreshDB from  '../libs/syncDB.js'
 
-router.get("/", async (req, res) => {});
+router.get("/refresh-db", async (req, res) => {
+  const message = refreshDB();
+  res.send(message);
+});
 
 // Handle doctors
 
