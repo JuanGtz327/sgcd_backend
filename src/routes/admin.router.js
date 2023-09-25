@@ -1,11 +1,12 @@
 import express from "express";
 const router = express.Router();
+import Sequelize from "sequelize";
 
 import bcrypt from "bcryptjs";
 import { authRequired } from "../middlewares/validateToken.js";
 
 import User, { Doctor, Paciente, DocPac, Cita } from "../models/models.js";
-import refreshDB from  '../libs/syncDB.js'
+import refreshDB from "../libs/syncDB.js";
 
 router.get("/refresh-db", async (req, res) => {
   const message = refreshDB();
@@ -264,11 +265,8 @@ router.delete("/deletePatient/:idPat", authRequired, async (req, res) => {
 
 router.post("/addCita", authRequired, async (req, res) => {
   const { ...parametros } = req.body;
-  const { id } = req.user;
   try {
-    parametros.Id_Doctor = id;
     const cita = await Cita.create(parametros);
-
     res.json(cita);
   } catch (error) {
     res.status(500).json({ message: error });
@@ -276,7 +274,20 @@ router.post("/addCita", authRequired, async (req, res) => {
 });
 
 router.get("/getCitas", authRequired, async (req, res) => {
-  const appointments = await Cita.findAll();
+  const appointments = await Paciente.findAll({
+    include: [
+      {
+        model: DocPac,
+        where: { idDoctor: req.user.idDoctor,idPaciente: Sequelize.col('Paciente.id') },
+        include: [
+          {
+            model: Cita,
+            required: true,
+          },
+        ],
+      },
+    ],
+  });
   res.status(200).json(appointments);
 });
 

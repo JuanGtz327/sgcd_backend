@@ -10,10 +10,9 @@ const sequelize = new Sequelize(
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
     dialect: "mysql",
-    logging: debugging,
+    logging: false,
     timezone: "-06:00",
     dialectOptions: {
-      useUTC: false, // for reading from database
       dateStrings: true,
       typeCast(field, next) {
         if (field.type === "DATETIME") {
