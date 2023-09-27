@@ -274,20 +274,41 @@ router.post("/addCita", authRequired, async (req, res) => {
 });
 
 router.get("/getCitas", authRequired, async (req, res) => {
-  const appointments = await Paciente.findAll({
+  const appointments = await Cita.findAll({
     include: [
       {
+        attributes: ["id"],
         model: DocPac,
-        where: { idDoctor: req.user.idDoctor,idPaciente: Sequelize.col('Paciente.id') },
+        where: { idDoctor: req.user.idDoctor },
         include: [
           {
-            model: Cita,
+            model: Paciente,
             required: true,
+            include: [
+              {
+                attributes: ["Correo"],
+                model: User,
+                required: true,
+              },
+            ],
           },
+          {
+            model: Doctor,
+            required: true,
+            include: [
+              {
+                attributes: ["Correo"],
+                model: User,
+                required: true,
+                where: { idClinica: req.user.idClinica },
+              },
+            ],
+          }
         ],
       },
     ],
   });
+
   res.status(200).json(appointments);
 });
 

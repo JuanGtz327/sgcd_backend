@@ -210,15 +210,20 @@ Cita.init(
   }
 );
 
-User.belongsTo(Clinica, { foreignKey: "idClinica" });
 Clinica.hasMany(User, { foreignKey: "idClinica" });
+User.belongsTo(Clinica, { foreignKey: "idClinica" });
 
 User.hasOne(Doctor, { foreignKey: "idUser", onDelete: "CASCADE" });
 User.hasOne(Paciente, { foreignKey: "idUser", onDelete: "CASCADE" });
+Doctor.belongsTo(User, { foreignKey: "idUser" });
+Paciente.belongsTo(User, { foreignKey: "idUser" });
 
 Doctor.hasOne(DocPac, { foreignKey: "idDoctor", onDelete: "CASCADE" });
 Paciente.hasOne(DocPac, { foreignKey: "idPaciente", onDelete: "CASCADE" });
+DocPac.belongsTo(Doctor, { foreignKey: "idDoctor" });
+DocPac.belongsTo(Paciente, { foreignKey: "idPaciente" });
 
 DocPac.hasMany(Cita, { foreignKey: "idDocPac", onDelete: "CASCADE" });
+Cita.belongsTo(DocPac, { foreignKey: "idDocPac" });
 
 export default User;
