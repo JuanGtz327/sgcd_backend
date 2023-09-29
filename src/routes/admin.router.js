@@ -1,16 +1,19 @@
 import express from "express";
 const router = express.Router();
-import Sequelize from "sequelize";
+import sequelize from '../db.js'
 
 import bcrypt from "bcryptjs";
 import { authRequired } from "../middlewares/validateToken.js";
 
 import User, { Doctor, Paciente, DocPac, Cita } from "../models/models.js";
-import refreshDB from "../libs/syncDB.js";
 
 router.get("/refresh-db", async (req, res) => {
-  const message = refreshDB();
-  res.send(message);
+  try {
+    await sequelize.sync({ alter: true });
+    res.send("DB refreshed");
+  } catch (error) {
+    res.send(JSON.stringify(error))
+  }
 });
 
 // Handle doctors
