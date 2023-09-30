@@ -5,7 +5,7 @@ import sequelize from '../db.js'
 import bcrypt from "bcryptjs";
 import { authRequired } from "../middlewares/validateToken.js";
 
-import User, { Doctor, Paciente, DocPac, Cita } from "../models/models.js";
+import User, { Doctor, Paciente, DocPac, Cita, Especialidad, Domicilio, Clinica } from "../models/models.js";
 
 router.get("/refresh-db", async (req, res) => {
   try {
@@ -14,6 +14,18 @@ router.get("/refresh-db", async (req, res) => {
   } catch (error) {
     res.send(JSON.stringify(error))
   }
+});
+
+router.get("/pruebas", async (req, res) => {
+  const a = await User.findAll({
+    include: [
+      {
+        model: Clinica,
+        required: true,
+      },
+    ],
+  });
+  res.json(a);
 });
 
 // Handle doctors
@@ -42,15 +54,32 @@ router.post("/addDoctor", authRequired, async (req, res) => {
 
     const user = await User.create(userPayload);
 
+    //Guardar el domicilio del doctor
+
+    const domicilioPayload = {
+      Calle: parametros.Calle,
+      Num_ext: parametros.Num_ext,
+      Num_int: parametros.Num_int,
+      Estado: parametros.Estado,
+      Municipio: parametros.Municipio,
+      Colonia: parametros.Colonia,
+      CP: parametros.CP,
+      Telefono: parametros.Telefono,
+    };
+
+    const domicilio = await Domicilio.create(domicilioPayload);
+
     //Guardar el doctor en la tabla de doctores
 
     const doctorPayload = {
       idUser: user.id,
       Nombre: parametros.Nombre,
-      ApellidoM: parametros.ApellidoM,
       ApellidoP: parametros.ApellidoP,
-      Especialidad: parametros.Especialidad,
+      ApellidoM: parametros.ApellidoM,
+      CURP: parametros.CURP,
       Cedula: parametros.Cedula,
+      Especialidad: parametros.Especialidad,
+      idDomicilio: domicilio.id,
     };
 
     const doctor = await Doctor.create(doctorPayload);
@@ -69,6 +98,31 @@ router.get("/getDoctors", authRequired, async (req, res) => {
       {
         model: Doctor,
         required: true,
+        attributes: [
+          "Nombre",
+          "ApellidoP",
+          "ApellidoM",
+          "CURP",
+          "Cedula",
+          "Especialidad",
+          "idUser",
+        ],
+        include: [
+          {
+            model: Domicilio,
+            required: true,
+            attributes: [
+              "Calle",
+              "Num_ext",
+              "Num_int",
+              "Estado",
+              "Municipio",
+              "Colonia",
+              "CP",
+              "Telefono",
+            ],
+          },
+        ],
       },
     ],
   });
@@ -313,6 +367,18 @@ router.get("/getCitas", authRequired, async (req, res) => {
   });
 
   res.status(200).json(appointments);
+});
+
+// Handle Especialidades
+
+router.get("/getEspecialidades", authRequired, async (req, res) => {
+  const especialidades = await Especialidad.findAll(
+    {
+      attributes: ["Nombre"],
+    }
+  );
+
+  res.status(200).json(especialidades);
 });
 
 export default router;

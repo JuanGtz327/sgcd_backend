@@ -131,7 +131,7 @@ Domicilio.init(
       allowNull: false,
     },
     Telefono:{
-      type: DataTypes.INTEGER,
+      type: DataTypes.STRING,
       allowNull: false,
     }
   },
@@ -161,6 +161,7 @@ Especialidad.init(
     tableName: "Especialidad",
     sequelize,
     modelName: "Especialidad",
+    timestamps: false,
   }
 );
 
@@ -198,8 +199,8 @@ Doctor.init(
       type: DataTypes.STRING,
       allowNull: false,
     },
-    idEspecialidad: {
-      type: DataTypes.INTEGER,
+    Especialidad: {
+      type: DataTypes.STRING,
       allowNull: false,
     },
     idDomicilio:{
@@ -577,14 +578,11 @@ Doctor.belongsTo(User, { foreignKey: "idUser" });
 User.hasOne(Paciente, { foreignKey: "idUser", onDelete: "CASCADE" });
 Paciente.belongsTo(User, { foreignKey: "idUser" });
 
-Doctor.hasOne(Domicilio, { foreignKey: "idDomicilio", onDelete: "CASCADE" });
-Domicilio.belongsTo(Doctor, { foreignKey: "idDomicilio" });
+Domicilio.hasOne(Doctor, { foreignKey: "idDomicilio", onDelete: "CASCADE" });
+Doctor.belongsTo(Domicilio, { foreignKey: "idDomicilio" });
 
-Paciente.hasOne(Domicilio, { foreignKey: "idDomicilio", onDelete: "CASCADE" });
-Domicilio.belongsTo(Paciente, { foreignKey: "idDomicilio" });
-
-Doctor.hasOne(Especialidad, { foreignKey: "idEspecialidad" });
-Especialidad.belongsTo(Doctor, { foreignKey: "idEspecialidad" });
+Domicilio.hasOne(Paciente, { foreignKey: "idDomicilio", onDelete: "CASCADE" });
+Paciente.belongsTo(Domicilio, { foreignKey: "idDomicilio" });
 
 Doctor.hasOne(DocPac, { foreignKey: "idDoctor", onDelete: "CASCADE" });
 Paciente.hasOne(DocPac, { foreignKey: "idPaciente", onDelete: "CASCADE" });
