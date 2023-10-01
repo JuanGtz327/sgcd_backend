@@ -507,10 +507,6 @@ Cita.init(
       type: DataTypes.STRING(255),
       allowNull: false,
     },
-    idReceta: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
     Estado: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
@@ -536,6 +532,10 @@ Receta.init(
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
+      allowNull: false,
+    },
+    idCita: {
+      type: DataTypes.INTEGER,
       allowNull: false,
     },
     Medicamento: {
@@ -604,8 +604,8 @@ DocPac.belongsTo(Paciente, { foreignKey: "idPaciente" });
 DocPac.hasMany(Cita, { foreignKey: "idDocPac", onDelete: "CASCADE" });
 Cita.belongsTo(DocPac, { foreignKey: "idDocPac" });
 
-Cita.hasOne(Receta, { foreignKey: "idReceta", onDelete: "CASCADE" });
-Receta.belongsTo(Cita, { foreignKey: "idReceta" });
+Cita.hasMany(Receta, { foreignKey: "idCita", onDelete: "CASCADE" });
+Receta.belongsTo(Cita, { foreignKey: "idCita" });
 
 DocPac.hasMany(Nota, { foreignKey: "idDocPac", onDelete: "CASCADE" });
 Nota.belongsTo(DocPac, { foreignKey: "idDocPac" });

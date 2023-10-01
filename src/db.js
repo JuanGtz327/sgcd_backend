@@ -18,6 +18,9 @@ const sequelize = new Sequelize(
         if (field.type === "DATETIME") {
           return field.string();
         }
+        if (field.type === "DATE") {
+          return field.string();
+        }
         return next();
       },
     },

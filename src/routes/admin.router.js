@@ -59,7 +59,7 @@ router.get("/pruebahistorial", async (req, res) => {
           {
             model: Domicilio,
             required: true,
-          }
+          },
         ],
       },
       {
@@ -74,6 +74,10 @@ router.get("/pruebahistorial", async (req, res) => {
         model: HistoriaClinicaActual,
         required: true,
       },
+      {
+        model: Cita,
+        required: false,
+      }
     ],
   });
   res.json(a);
@@ -81,6 +85,9 @@ router.get("/pruebahistorial", async (req, res) => {
 
 router.get("/pruebapacientes", async (req, res) => {
   const a = await Paciente.findAll({
+    attributes: {
+      exclude: ["idDomicilio", "createdAt", "updatedAt"],
+    },
     include: [
       {
         model: DocPac,
@@ -91,10 +98,11 @@ router.get("/pruebapacientes", async (req, res) => {
             model: Doctor,
             attributes: ["Nombre", "ApellidoP", "ApellidoM"],
             required: true,
+            where: { id: 2 },
             include: [
               {
                 model: User,
-                attributes: ["Correo","idClinica"],
+                attributes: ["Correo", "idClinica"],
                 required: true,
               },
             ],
@@ -103,14 +111,16 @@ router.get("/pruebapacientes", async (req, res) => {
       },
       {
         model: User,
-        attributes: ["Correo","idClinica"],
-        where: { idClinica: 1 },
+        attributes: ["Correo", "idClinica"],
         required: true,
       },
       {
         model: Domicilio,
         required: true,
-      }
+        attributes: {
+          exclude: ["id", "createdAt", "updatedAt"],
+        },
+      },
     ],
   });
   res.json(a);
@@ -156,7 +166,9 @@ router.post("/addDoctor", authRequired, async (req, res) => {
       Telefono: parametros.Telefono,
     };
 
-    const domicilio = await Domicilio.create(domicilioPayload, { transaction: t });
+    const domicilio = await Domicilio.create(domicilioPayload, {
+      transaction: t,
+    });
 
     //Guardar el doctor en la tabla de doctores
 
@@ -333,7 +345,7 @@ router.post("/addPatient", authRequired, async (req, res) => {
       idPaciente: patient.id,
     };
 
-    await DocPac.create(docPacPayload, {transaction: t});
+    await DocPac.create(docPacPayload, { transaction: t });
 
     //Guardar historial clinico paciente
     const historiaMedica = await HistoriaMedica.create(historiaMedicaPayload, {
@@ -351,7 +363,7 @@ router.post("/addPatient", authRequired, async (req, res) => {
       idPaciente: patient.id,
       idHistoriaMedica: historiaMedica.id,
       idExamenFisico: examenFisico.id,
-      idHistoriaClinicaActual: historiaClinicaActual.id
+      idHistoriaClinicaActual: historiaClinicaActual.id,
     };
 
     const historial_clinico = await HistorialClinico.create(
@@ -368,20 +380,42 @@ router.post("/addPatient", authRequired, async (req, res) => {
 });
 
 router.get("/getPatients", authRequired, async (req, res) => {
-  const patients = await User.findAll({
-    where: { is_doctor: false, idClinica: req.user.idClinica },
-    attributes: ["Correo"],
+  const patients = await Paciente.findAll({
+    attributes: {
+      exclude: ["idDomicilio", "createdAt", "updatedAt"],
+    },
     include: [
       {
-        model: Paciente,
+        model: DocPac,
+        attributes: ["id"],
         required: true,
         include: [
           {
-            model: DocPac,
-            where: { idDoctor: req.user.idDoctor },
+            model: Doctor,
+            attributes: ["Nombre", "ApellidoP", "ApellidoM"],
             required: true,
+            where: { id: req.user.idDoctor },
+            include: [
+              {
+                model: User,
+                attributes: ["Correo", "idClinica"],
+                required: true,
+              },
+            ],
           },
         ],
+      },
+      {
+        model: User,
+        attributes: ["Correo", "idClinica"],
+        required: true,
+      },
+      {
+        model: Domicilio,
+        required: true,
+        attributes: {
+          exclude: ["id", "createdAt", "updatedAt"],
+        },
       },
     ],
   });
@@ -450,10 +484,21 @@ router.delete("/deletePatient/:idPat", authRequired, async (req, res) => {
 
 router.post("/addCita", authRequired, async (req, res) => {
   const { ...parametros } = req.body;
+  const t = await sequelize.transaction();
   try {
-    const cita = await Cita.create(parametros);
+    //Obtener el historial clinico del paciente
+    const historial_clinico = await HistorialClinico.findOne({
+      where: { idPaciente: parametros.id },
+    });
+
+    delete parametros.id;
+    parametros.idHistorialClinico = historial_clinico.id;
+
+    const cita = await Cita.create(parametros, { transaction: t });
     res.json(cita);
+    await t.commit();
   } catch (error) {
+    await t.rollback();
     res.status(500).json({ message: error });
   }
 });
