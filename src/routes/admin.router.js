@@ -77,7 +77,7 @@ router.get("/pruebahistorial", async (req, res) => {
       {
         model: Cita,
         required: false,
-      }
+      },
     ],
   });
   res.json(a);
@@ -295,8 +295,8 @@ router.post("/addPatient", authRequired, async (req, res) => {
     Correo,
     Password,
     PasswordDoctor,
+    preAppointments,
   } = req.body;
-  console.log(req.body);
 
   const { idClinica, idDoctor } = req.user;
   const t = await sequelize.transaction();
@@ -307,10 +307,12 @@ router.post("/addPatient", authRequired, async (req, res) => {
     const userExists = await User.findOne({
       where: { Correo: Correo },
     });
-    if (userExists)
+    if (userExists) {
+      await t.rollback();
       return res
         .status(400)
         .json({ message: "La direccion de correo ya esta en uso" });
+    }
 
     //Guardar el paciente en la tabla de usuarios
 
@@ -345,7 +347,7 @@ router.post("/addPatient", authRequired, async (req, res) => {
       idPaciente: patient.id,
     };
 
-    await DocPac.create(docPacPayload, { transaction: t });
+    const docpac = await DocPac.create(docPacPayload, { transaction: t });
 
     //Guardar historial clinico paciente
     const historiaMedica = await HistoriaMedica.create(historiaMedicaPayload, {
@@ -370,11 +372,37 @@ router.post("/addPatient", authRequired, async (req, res) => {
       historial_clinico_payload,
       { transaction: t }
     );
+
+    //Guardar las citas preestablecidas
+    if (preAppointments.length > 0) {
+      const citas = preAppointments.map((appointment) => {
+        appointment.idDocPac = docpac.id;
+        appointment.idHistorialClinico = historial_clinico.id;
+        return appointment;
+      });
+
+      await Cita.bulkCreate(citas, { transaction: t });
+    }
+
+    //Comprobar password del doctor
+    const doctor = await Doctor.findOne({
+      where: { id: idDoctor },
+      include: [{ model: User }],
+    });
+    const isPasswordValid = await bcrypt.compare(
+      PasswordDoctor,
+      doctor.User.Password
+    );
+
+    if (!isPasswordValid) {
+      await t.rollback();
+      return res.status(400).json({ message: "La firma no es valida" });
+    }
+
     await t.commit();
     res.json(historial_clinico);
   } catch (error) {
     await t.rollback();
-    console.log(error);
     res.status(500).json({ message: error });
   }
 });
