@@ -1,28 +1,116 @@
 import express from "express";
 const router = express.Router();
-import sequelize from '../db.js'
+import sequelize from "../db.js";
 
 import bcrypt from "bcryptjs";
 import { authRequired } from "../middlewares/validateToken.js";
 
-import User, { Doctor, Paciente, DocPac, Cita, Especialidad, Domicilio, Clinica } from "../models/models.js";
+import User, {
+  Doctor,
+  Paciente,
+  DocPac,
+  Cita,
+  Especialidad,
+  Domicilio,
+  Clinica,
+  HistoriaMedica,
+  ExamenFisico,
+  HistoriaClinicaActual,
+  HistorialClinico,
+} from "../models/models.js";
 
 router.get("/refresh-db", async (req, res) => {
   try {
     await sequelize.sync({ alter: true });
     res.send("DB refreshed");
   } catch (error) {
-    res.send(JSON.stringify(error))
+    res.send(JSON.stringify(error));
   }
 });
 
-router.get("/pruebas", async (req, res) => {
-  const a = await User.findAll({
+router.get("/pruebahistorial", async (req, res) => {
+  const a = await HistorialClinico.findAll({
+    attributes: ["id"],
     include: [
       {
-        model: Clinica,
+        model: Paciente,
+        required: true,
+        include: [
+          {
+            model: DocPac,
+            required: true,
+            include: [
+              {
+                model: Doctor,
+                required: true,
+                include: [
+                  {
+                    model: User,
+                    required: true,
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            model: User,
+            required: true,
+          },
+          {
+            model: Domicilio,
+            required: true,
+          }
+        ],
+      },
+      {
+        model: HistoriaMedica,
         required: true,
       },
+      {
+        model: ExamenFisico,
+        required: true,
+      },
+      {
+        model: HistoriaClinicaActual,
+        required: true,
+      },
+    ],
+  });
+  res.json(a);
+});
+
+router.get("/pruebapacientes", async (req, res) => {
+  const a = await Paciente.findAll({
+    include: [
+      {
+        model: DocPac,
+        attributes: ["id"],
+        required: true,
+        include: [
+          {
+            model: Doctor,
+            attributes: ["Nombre", "ApellidoP", "ApellidoM"],
+            required: true,
+            include: [
+              {
+                model: User,
+                attributes: ["Correo","idClinica"],
+                required: true,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        model: User,
+        attributes: ["Correo","idClinica"],
+        where: { idClinica: 1 },
+        required: true,
+      },
+      {
+        model: Domicilio,
+        required: true,
+      }
     ],
   });
   res.json(a);
@@ -33,6 +121,7 @@ router.get("/pruebas", async (req, res) => {
 router.post("/addDoctor", authRequired, async (req, res) => {
   const { ...parametros } = req.body;
   const { idClinica } = req.user;
+  const t = await sequelize.transaction();
   try {
     const userExists = await User.findOne({
       where: { Correo: parametros.Correo },
@@ -52,7 +141,7 @@ router.post("/addDoctor", authRequired, async (req, res) => {
       idClinica: idClinica,
     };
 
-    const user = await User.create(userPayload);
+    const user = await User.create(userPayload, { transaction: t });
 
     //Guardar el domicilio del doctor
 
@@ -67,7 +156,7 @@ router.post("/addDoctor", authRequired, async (req, res) => {
       Telefono: parametros.Telefono,
     };
 
-    const domicilio = await Domicilio.create(domicilioPayload);
+    const domicilio = await Domicilio.create(domicilioPayload, { transaction: t });
 
     //Guardar el doctor en la tabla de doctores
 
@@ -82,10 +171,13 @@ router.post("/addDoctor", authRequired, async (req, res) => {
       idDomicilio: domicilio.id,
     };
 
-    const doctor = await Doctor.create(doctorPayload);
+    const doctor = await Doctor.create(doctorPayload, { transaction: t });
+
+    await t.commit();
 
     res.json(doctor);
   } catch (error) {
+    await t.rollback();
     res.status(500).json({ message: error });
   }
 });
@@ -182,15 +274,26 @@ router.delete("/deleteDoctor/:idDoc", authRequired, async (req, res) => {
 // Handle Patients
 
 router.post("/addPatient", authRequired, async (req, res) => {
-  const { ...parametros } = req.body;
-  const { idClinica, idDoctor } = req.user;
+  const {
+    pacientePayload,
+    domicilioPayload,
+    historiaMedicaPayload,
+    examenFisicoPayload,
+    historiaClinicaActualPayload,
+    Correo,
+    Password,
+    PasswordDoctor,
+  } = req.body;
+  console.log(req.body);
 
+  const { idClinica, idDoctor } = req.user;
+  const t = await sequelize.transaction();
   try {
     if (!idDoctor)
       return res.status(400).send({ message: "You must provide an Id_Doctor" });
 
     const userExists = await User.findOne({
-      where: { Correo: parametros.Correo },
+      where: { Correo: Correo },
     });
     if (userExists)
       return res
@@ -199,30 +302,29 @@ router.post("/addPatient", authRequired, async (req, res) => {
 
     //Guardar el paciente en la tabla de usuarios
 
-    const passwordHash = await bcrypt.hash(parametros.Password, 10);
+    const passwordHash = await bcrypt.hash(Password, 10);
 
     const userPayload = {
-      Correo: parametros.Correo,
+      Correo: Correo,
       Password: passwordHash,
       idClinica: idClinica,
       is_doctor: false,
     };
 
-    const user = await User.create(userPayload);
+    const user = await User.create(userPayload, { transaction: t });
+
+    //Guardar el domicilio del paciente
+
+    const domicilio = await Domicilio.create(domicilioPayload, {
+      transaction: t,
+    });
 
     //Guardar el paciente en la tabla de pacientes
 
-    const patientPayload = {
-      idUser: user.id,
-      Nombre: parametros.Nombre,
-      ApellidoM: parametros.ApellidoM,
-      ApellidoP: parametros.ApellidoP,
-      Edad: parametros.Edad,
-      Genero: parametros.Genero,
-      Domicilio: parametros.Domicilio,
-    };
+    pacientePayload.idUser = user.id;
+    pacientePayload.idDomicilio = domicilio.id;
 
-    const patient = await Paciente.create(patientPayload);
+    const patient = await Paciente.create(pacientePayload, { transaction: t });
 
     //Guardar las referencias en la tabla de DocPac
 
@@ -231,10 +333,36 @@ router.post("/addPatient", authRequired, async (req, res) => {
       idPaciente: patient.id,
     };
 
-    await DocPac.create(docPacPayload);
+    await DocPac.create(docPacPayload, {transaction: t});
 
-    res.json(patient);
+    //Guardar historial clinico paciente
+    const historiaMedica = await HistoriaMedica.create(historiaMedicaPayload, {
+      transaction: t,
+    });
+    const examenFisico = await ExamenFisico.create(examenFisicoPayload, {
+      transaction: t,
+    });
+    const historiaClinicaActual = await HistoriaClinicaActual.create(
+      historiaClinicaActualPayload,
+      { transaction: t }
+    );
+
+    const historial_clinico_payload = {
+      idPaciente: patient.id,
+      idHistoriaMedica: historiaMedica.id,
+      idExamenFisico: examenFisico.id,
+      idHistoriaClinicaActual: historiaClinicaActual.id
+    };
+
+    const historial_clinico = await HistorialClinico.create(
+      historial_clinico_payload,
+      { transaction: t }
+    );
+    await t.commit();
+    res.json(historial_clinico);
   } catch (error) {
+    await t.rollback();
+    console.log(error);
     res.status(500).json({ message: error });
   }
 });
@@ -360,7 +488,7 @@ router.get("/getCitas", authRequired, async (req, res) => {
                 where: { idClinica: req.user.idClinica },
               },
             ],
-          }
+          },
         ],
       },
     ],
@@ -372,11 +500,9 @@ router.get("/getCitas", authRequired, async (req, res) => {
 // Handle Especialidades
 
 router.get("/getEspecialidades", authRequired, async (req, res) => {
-  const especialidades = await Especialidad.findAll(
-    {
-      attributes: ["Nombre"],
-    }
-  );
+  const especialidades = await Especialidad.findAll({
+    attributes: ["Nombre"],
+  });
 
   res.status(200).json(especialidades);
 });
