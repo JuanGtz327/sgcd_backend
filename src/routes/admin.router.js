@@ -17,6 +17,7 @@ import User, {
   ExamenFisico,
   HistoriaClinicaActual,
   HistorialClinico,
+  Nota,
 } from "../models/models.js";
 
 router.get("/refresh-db", async (req, res) => {
@@ -78,6 +79,10 @@ router.get("/pruebahistorial", async (req, res) => {
         model: Cita,
         required: false,
       },
+      {
+        model: Nota,
+        required: false,
+      }
     ],
   });
   res.json(a);
@@ -296,6 +301,7 @@ router.post("/addPatient", authRequired, async (req, res) => {
     Password,
     PasswordDoctor,
     preAppointments,
+    notas
   } = req.body;
 
   const { idClinica, idDoctor } = req.user;
@@ -382,6 +388,17 @@ router.post("/addPatient", authRequired, async (req, res) => {
       });
 
       await Cita.bulkCreate(citas, { transaction: t });
+    }
+
+    //Guardar las notas
+    if (notas.length > 0) {
+      const notes = notas.map((nota) => {
+        nota.idDocPac = docpac.id;
+        nota.idHistorialClinico = historial_clinico.id;
+        return nota;
+      });
+
+      await Nota.bulkCreate(notes, { transaction: t });
     }
 
     //Comprobar password del doctor
