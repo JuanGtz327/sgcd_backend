@@ -126,6 +126,32 @@ router.get("/pruebapacientes", async (req, res) => {
           exclude: ["id", "createdAt", "updatedAt"],
         },
       },
+      {
+        model: HistorialClinico,
+        required: true,
+        include: [
+          {
+            model: HistoriaMedica,
+            required: true,
+          },
+          {
+            model: ExamenFisico,
+            required: true,
+          },
+          {
+            model: HistoriaClinicaActual,
+            required: true,
+          },
+          {
+            model: Cita,
+            required: false,
+          },
+          {
+            model: Nota,
+            required: false,
+          }
+        ]
+      }
     ],
   });
   res.json(a);
