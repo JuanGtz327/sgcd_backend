@@ -82,7 +82,7 @@ router.get("/pruebahistorial", async (req, res) => {
       {
         model: Nota,
         required: false,
-      }
+      },
     ],
   });
   res.json(a);
@@ -149,9 +149,33 @@ router.get("/pruebapacientes", async (req, res) => {
           {
             model: Nota,
             required: false,
-          }
-        ]
-      }
+          },
+        ],
+      },
+    ],
+  });
+  res.json(a);
+});
+
+router.get("/pruebadoctores", async (req, res) => {
+  const a = await Doctor.findAll({
+    attributes: {
+      exclude: ["createdAt", "updatedAt"],
+    },
+    include: [
+      {
+        model: User,
+        attributes: ["Correo", "idClinica"],
+        required: true,
+        where: { idClinica: 1 },
+      },
+      {
+        model: Domicilio,
+        required: true,
+        attributes: {
+          exclude: ["id", "createdAt", "updatedAt"],
+        },
+      },
     ],
   });
   res.json(a);
@@ -226,38 +250,23 @@ router.post("/addDoctor", authRequired, async (req, res) => {
 });
 
 router.get("/getDoctors", authRequired, async (req, res) => {
-  const doctors = await User.findAll({
-    where: { is_doctor: true, idClinica: req.user.idClinica },
-    attributes: ["Correo"],
+  const doctors = await Doctor.findAll({
+    attributes: {
+      exclude: ["createdAt", "updatedAt"],
+    },
     include: [
       {
-        model: Doctor,
+        model: User,
+        attributes: ["Correo", "idClinica"],
         required: true,
-        attributes: [
-          "Nombre",
-          "ApellidoP",
-          "ApellidoM",
-          "CURP",
-          "Cedula",
-          "Especialidad",
-          "idUser",
-        ],
-        include: [
-          {
-            model: Domicilio,
-            required: true,
-            attributes: [
-              "Calle",
-              "Num_ext",
-              "Num_int",
-              "Estado",
-              "Municipio",
-              "Colonia",
-              "CP",
-              "Telefono",
-            ],
-          },
-        ],
+        where: { idClinica: req.user.idClinica },
+      },
+      {
+        model: Domicilio,
+        required: true,
+        attributes: {
+          exclude: ["id", "createdAt", "updatedAt"],
+        },
       },
     ],
   });
@@ -327,7 +336,7 @@ router.post("/addPatient", authRequired, async (req, res) => {
     Password,
     PasswordDoctor,
     preAppointments,
-    notas
+    notas,
   } = req.body;
 
   const { idClinica, idDoctor } = req.user;
@@ -480,6 +489,50 @@ router.get("/getPatients", authRequired, async (req, res) => {
         model: User,
         attributes: ["Correo", "idClinica"],
         required: true,
+      },
+      {
+        model: Domicilio,
+        required: true,
+        attributes: {
+          exclude: ["id", "createdAt", "updatedAt"],
+        },
+      },
+    ],
+  });
+  res.status(200).json(patients);
+});
+
+router.get("/getPatientsClinic/:idClinica", authRequired, async (req, res) => {
+  const { idClinica } = req.params;
+  const patients = await Paciente.findAll({
+    attributes: {
+      exclude: ["idDomicilio", "createdAt", "updatedAt"],
+    },
+    include: [
+      {
+        model: DocPac,
+        attributes: ["id"],
+        required: true,
+        include: [
+          {
+            model: Doctor,
+            attributes: ["Nombre", "ApellidoP", "ApellidoM"],
+            required: true,
+            include: [
+              {
+                model: User,
+                attributes: ["Correo", "idClinica"],
+                required: true,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        model: User,
+        attributes: ["Correo", "idClinica"],
+        required: true,
+        where: { idClinica },
       },
       {
         model: Domicilio,
