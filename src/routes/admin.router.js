@@ -181,6 +181,65 @@ router.get("/pruebadoctores", async (req, res) => {
   res.json(a);
 });
 
+router.get("/pruebas", async (req, res) => {
+  const paciente = await Paciente.findOne({
+    where: { id: 2 },
+    include: [
+      {
+        model: DocPac,
+        required: true,
+        include: [
+          {
+            model: Doctor,
+            required: true,
+            include: [
+              {
+                model: User,
+                required: true,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        model: User,
+        required: true,
+      },
+      {
+        model: Domicilio,
+        required: true,
+      },
+      {
+        model: HistorialClinico,
+        required: true,
+        include: [
+          {
+            model: HistoriaMedica,
+            required: true,
+          },
+          {
+            model: ExamenFisico,
+            required: true,
+          },
+          {
+            model: HistoriaClinicaActual,
+            required: true,
+          },
+          {
+            model: Cita,
+            required: false,
+          },
+          {
+            model: Nota,
+            required: false,
+          },
+        ],
+      }
+    ],
+  });
+  return res.json(paciente);
+});
+
 // Handle doctors
 
 router.post("/addDoctor", authRequired, async (req, res) => {
@@ -550,8 +609,62 @@ router.get("/getPatient/:idPat", authRequired, async (req, res) => {
   const { idPat } = req.params;
   if (!idPat)
     return res.status(400).send({ message: "You must provide an Id_Paciente" });
-  const patient = await Paciente.findByPk(idPat);
-  if (!patient) return res.status(404).send({ message: "Patient not found" });
+
+  const patient = await Paciente.findOne({
+    where: { id: idPat},
+    include: [
+      {
+        model: DocPac,
+        required: true,
+        include: [
+          {
+            model: Doctor,
+            required: true,
+            include: [
+              {
+                model: User,
+                required: true,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        model: User,
+        required: true,
+      },
+      {
+        model: Domicilio,
+        required: true,
+      },
+      {
+        model: HistorialClinico,
+        required: true,
+        include: [
+          {
+            model: HistoriaMedica,
+            required: true,
+          },
+          {
+            model: ExamenFisico,
+            required: true,
+          },
+          {
+            model: HistoriaClinicaActual,
+            required: true,
+          },
+          {
+            model: Cita,
+            required: false,
+          },
+          {
+            model: Nota,
+            required: false,
+          },
+        ],
+      }
+    ],
+  });
   res.status(200).json(patient);
 });
 
