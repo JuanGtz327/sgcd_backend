@@ -234,7 +234,7 @@ router.get("/pruebas", async (req, res) => {
             required: false,
           },
         ],
-      }
+      },
     ],
   });
   return res.json(paciente);
@@ -611,7 +611,7 @@ router.get("/getPatient/:idPat", authRequired, async (req, res) => {
     return res.status(400).send({ message: "You must provide an Id_Paciente" });
 
   const patient = await Paciente.findOne({
-    where: { id: idPat},
+    where: { id: idPat },
     include: [
       {
         model: DocPac,
@@ -662,7 +662,7 @@ router.get("/getPatient/:idPat", authRequired, async (req, res) => {
             required: false,
           },
         ],
-      }
+      },
     ],
   });
   res.status(200).json(patient);
@@ -787,6 +787,44 @@ router.get("/getEspecialidades", authRequired, async (req, res) => {
   });
 
   res.status(200).json(especialidades);
+});
+
+// Hanfle Historial Clinico
+
+router.put("/editHistoriaMedica/:idHM", authRequired, async (req, res) => {
+  const { idHM } = req.params;
+  const { ...parametros } = req.body;
+
+  const historiaMedica = await HistoriaMedica.findOne({
+    where: { id: idHM },
+  });
+
+  if (!historiaMedica)
+    return res.status(404).send({ message: "Historia medica not found" });
+
+  const updatedHistoriaMedica = await HistoriaMedica.update(parametros, {
+    where: { id: idHM },
+  });
+
+  res.status(200).send(updatedHistoriaMedica);
+});
+
+router.put("/editExamenFisico/:idEF", authRequired, async (req, res) => {
+  const { idEF } = req.params;
+  const { ...parametros } = req.body;
+
+  const examenFisico = await ExamenFisico.findOne({
+    where: { id: idEF },
+  });
+
+  if (!examenFisico)
+    return res.status(404).send({ message: "ExamenF fisico not found" });
+
+  const updatedExamenFisico = await ExamenFisico.update(parametros, {
+    where: { id: idEF },
+  });
+
+  res.status(200).send(updatedExamenFisico);
 });
 
 export default router;
