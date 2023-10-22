@@ -73,7 +73,7 @@ router.get("/pruebahistorial", async (req, res) => {
       },
       {
         model: HistoriaClinicaActual,
-        required: true,
+        required: false,
       },
       {
         model: Cita,
@@ -183,7 +183,7 @@ router.get("/pruebadoctores", async (req, res) => {
 
 router.get("/pruebas", async (req, res) => {
   const paciente = await Paciente.findOne({
-    where: { id: 2 },
+    where: { id: 1 },
     include: [
       {
         model: DocPac,
@@ -223,7 +223,7 @@ router.get("/pruebas", async (req, res) => {
           },
           {
             model: HistoriaClinicaActual,
-            required: true,
+            required: false,
           },
           {
             model: Cita,
@@ -456,20 +456,22 @@ router.post("/addPatient", authRequired, async (req, res) => {
     const examenFisico = await ExamenFisico.create(examenFisicoPayload, {
       transaction: t,
     });
-    const historiaClinicaActual = await HistoriaClinicaActual.create(
-      historiaClinicaActualPayload,
-      { transaction: t }
-    );
 
     const historial_clinico_payload = {
       idPaciente: patient.id,
       idHistoriaMedica: historiaMedica.id,
       idExamenFisico: examenFisico.id,
-      idHistoriaClinicaActual: historiaClinicaActual.id,
     };
 
     const historial_clinico = await HistorialClinico.create(
       historial_clinico_payload,
+      { transaction: t }
+    );
+
+    // Guardar historia clinica actual que son los padecimientos
+
+    await HistoriaClinicaActual.create(
+      {...historiaClinicaActualPayload, idHistorialClinico: historial_clinico.id},
       { transaction: t }
     );
 
@@ -825,6 +827,16 @@ router.put("/editExamenFisico/:idEF", authRequired, async (req, res) => {
   });
 
   res.status(200).send(updatedExamenFisico);
+});
+
+router.post("/addHistoriaClinicaActual", authRequired, async (req, res) => {
+  const { ...parametros } = req.body;
+
+  const historiaClinicaActual = await HistoriaClinicaActual.create(
+    parametros
+  );
+
+  res.status(200).json(historiaClinicaActual);
 });
 
 export default router;

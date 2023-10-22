@@ -387,6 +387,36 @@ ExamenFisico.init(
   }
 );
 
+export class HistorialClinico extends Model {}
+
+HistorialClinico.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+      allowNull: false,
+    },
+    idPaciente: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    idHistoriaMedica: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    idExamenFisico: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    }
+  },
+  {
+    tableName: "historial_clinico",
+    sequelize,
+    modelName: "HistorialClinico",
+  }
+);
+
 export class HistoriaClinicaActual extends Model {}
 
 HistoriaClinicaActual.init(
@@ -413,6 +443,10 @@ HistoriaClinicaActual.init(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    idHistorialClinico: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
   },
   {
     tableName: "historia_clinica_actual",
@@ -421,39 +455,6 @@ HistoriaClinicaActual.init(
   }
 );
 
-export class HistorialClinico extends Model {}
-
-HistorialClinico.init(
-  {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-      allowNull: false,
-    },
-    idPaciente: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    idHistoriaMedica: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    idExamenFisico: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    idHistoriaClinicaActual: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    }
-  },
-  {
-    tableName: "historial_clinico",
-    sequelize,
-    modelName: "HistorialClinico",
-  }
-);
 
 export class Nota extends Model {}
 
@@ -619,8 +620,8 @@ HistorialClinico.belongsTo(HistoriaMedica, { foreignKey: "idHistoriaMedica" });
 ExamenFisico.hasOne(HistorialClinico, { foreignKey: "idExamenFisico", onDelete: "CASCADE" });
 HistorialClinico.belongsTo(ExamenFisico, { foreignKey: "idExamenFisico" });
 
-HistoriaClinicaActual.hasOne(HistorialClinico, { foreignKey: "idHistoriaClinicaActual", onDelete: "CASCADE" });
-HistorialClinico.belongsTo(HistoriaClinicaActual, { foreignKey: "idHistoriaClinicaActual" });
+HistorialClinico.hasMany(HistoriaClinicaActual, { foreignKey: "idHistorialClinico", onDelete: "CASCADE" });
+HistoriaClinicaActual.belongsTo(HistorialClinico, { foreignKey: "idHistorialClinico" });
 
 HistorialClinico.hasMany(Cita, { foreignKey: "idHistorialClinico", onDelete: "CASCADE" });
 Cita.belongsTo(HistorialClinico, { foreignKey: "idHistorialClinico" });
