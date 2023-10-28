@@ -1,6 +1,7 @@
 import express from "express";
 const router = express.Router();
 import sequelize from "../db.js";
+import { Op } from "sequelize";
 
 import bcrypt from "bcryptjs";
 import { authRequired } from "../middlewares/validateToken.js";
@@ -12,7 +13,7 @@ import User, {
   Cita,
   Especialidad,
   Domicilio,
-  Clinica,
+  CancelacionCita,
   HistoriaMedica,
   ExamenFisico,
   HistoriaClinicaActual,
@@ -471,7 +472,7 @@ router.post("/addPatient", authRequired, async (req, res) => {
     // Guardar historia clinica actual que son los padecimientos
 
     await HistoriaClinicaActual.create(
-      {...historiaClinicaActualPayload, idHistorialClinico: historial_clinico.id},
+      { ...historiaClinicaActualPayload, idHistorialClinico: historial_clinico.id },
       { transaction: t }
     );
 
@@ -725,6 +726,19 @@ router.post("/addCita", authRequired, async (req, res) => {
   const { ...parametros } = req.body;
   const t = await sequelize.transaction();
   try {
+
+    const citaAgendada = await Cita.findOne({
+      where: { Fecha: parametros.Fecha, Estado: true },
+      include: [{
+        model: DocPac, where: { idDoctor: req.user.idDoctor },
+        include: [{ model: Paciente, required: true }]
+      }]
+    });
+
+    if (citaAgendada) {
+      return res.status(400).json({ message: `Ya tiene agendada una cita con ${citaAgendada.DocPac.Paciente.Nombre} ${citaAgendada.DocPac.Paciente.ApellidoP}` });
+    }
+
     //Obtener el historial clinico del paciente
     const historial_clinico = await HistorialClinico.findOne({
       where: { idPaciente: parametros.id },
@@ -744,6 +758,7 @@ router.post("/addCita", authRequired, async (req, res) => {
 
 router.get("/getCitas", authRequired, async (req, res) => {
   const appointments = await Cita.findAll({
+    where: { Estado: true },
     include: [
       {
         attributes: ["id"],
@@ -779,6 +794,98 @@ router.get("/getCitas", authRequired, async (req, res) => {
   });
 
   res.status(200).json(appointments);
+});
+
+router.get("/getValidCitas/:fecha", authRequired, async (req, res) => {
+  const { fecha } = req.params;
+  const appointments = await Cita.findAll({
+    where: {
+      Estado: true, Fecha: {
+        [Op.gt]: fecha
+      }
+    },
+    include: [
+      {
+        attributes: ["id"],
+        model: DocPac,
+        where: { idDoctor: req.user.idDoctor },
+        include: [
+          {
+            model: Paciente,
+            required: true,
+            include: [
+              {
+                attributes: ["Correo"],
+                model: User,
+                required: true,
+              },
+            ],
+          },
+          {
+            model: Doctor,
+            required: true,
+            include: [
+              {
+                attributes: ["Correo"],
+                model: User,
+                required: true,
+                where: { idClinica: req.user.idClinica },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  res.status(200).json(appointments);
+});
+
+router.post("/cancelCita", authRequired, async (req, res) => {
+  const { id, Motivo } = req.body;
+
+  const t = await sequelize.transaction();
+
+  try {
+    const cita = await Cita.findOne({ where: { id } });
+
+    if (!cita) return res.status(404).json({ message: "Cita not found" });
+
+    const cancelacion = await CancelacionCita.create({ idCita: cita.id, Motivo });
+
+    await Cita.update({ Estado: false }, { where: { id } });
+    await t.commit();
+    res.status(200).json(cancelacion);
+  } catch (error) {
+    await t.rollback();
+    res.status(500).json({ message: error });
+  }
+});
+
+router.put("/editCita", authRequired, async (req, res) => {
+  const { id, Fecha, Diagnostico } = req.body;
+
+  const t = await sequelize.transaction();
+
+  try {
+
+    const citaAgendada = await Cita.findOne({ where: { Fecha, Estado: true }, include: [{ model: DocPac, where: { idDoctor: req.user.idDoctor }, include: [{ model: Paciente, required: true }] }] });
+
+    if (citaAgendada) {
+      return res.status(400).json({ message: `Ya tiene agendada una cita con ${citaAgendada.DocPac.Paciente.Nombre} ${citaAgendada.DocPac.Paciente.ApellidoP}` });
+    }
+
+    const cita = await Cita.findOne({ where: { id } });
+
+    if (!cita) return res.status(404).json({ message: "Cita not found" });
+
+    await Cita.update({ Fecha, Diagnostico }, { where: { id } });
+    await t.commit();
+    res.status(200).json(cita);
+  } catch (error) {
+    await t.rollback();
+    res.status(500).json({ message: error });
+  }
 });
 
 // Handle Especialidades

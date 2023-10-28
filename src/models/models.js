@@ -525,6 +525,32 @@ Cita.init(
   }
 );
 
+export class CancelacionCita extends Model {}
+
+CancelacionCita.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+      allowNull: false,
+    },
+    idCita: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    Motivo: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+    },
+  },
+  {
+    tableName: "CancelacionCita",
+    sequelize,
+    modelName: "CancelacionCita",
+  }
+);
+
 export class Receta extends Model {}
 
 Receta.init(
@@ -628,5 +654,8 @@ Cita.belongsTo(HistorialClinico, { foreignKey: "idHistorialClinico" });
 
 HistorialClinico.hasMany(Nota, { foreignKey: "idHistorialClinico", onDelete: "CASCADE" });
 Nota.belongsTo(HistorialClinico, { foreignKey: "idHistorialClinico" });
+
+Cita.hasOne(CancelacionCita, { foreignKey: "idCita", onDelete: "CASCADE" });
+CancelacionCita.belongsTo(Cita, { foreignKey: "idCita" });
 
 export default User;
