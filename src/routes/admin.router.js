@@ -183,62 +183,48 @@ router.get("/pruebadoctores", async (req, res) => {
 });
 
 router.get("/pruebas", async (req, res) => {
-  const paciente = await Paciente.findOne({
-    where: { id: 1 },
+  const appointments = await Cita.findAll({
+    where: { Estado: true },
     include: [
       {
+        attributes: ["id"],
         model: DocPac,
         required: true,
         include: [
           {
-            model: Doctor,
+            model: Paciente,
             required: true,
             include: [
               {
+                attributes: ["Correo"],
                 model: User,
                 required: true,
+              },
+            ],
+          },
+          {
+            model: Doctor,
+            required: true,
+            where: { id: 2 },
+            include: [
+              {
+                attributes: ["Correo"],
+                model: User,
+                required: true,
+                where: { idClinica: 1 },
               },
             ],
           },
         ],
       },
       {
-        model: User,
-        required: true,
-      },
-      {
-        model: Domicilio,
-        required: true,
-      },
-      {
-        model: HistorialClinico,
-        required: true,
-        include: [
-          {
-            model: HistoriaMedica,
-            required: true,
-          },
-          {
-            model: ExamenFisico,
-            required: true,
-          },
-          {
-            model: HistoriaClinicaActual,
-            required: false,
-          },
-          {
-            model: Cita,
-            required: false,
-          },
-          {
-            model: Nota,
-            required: false,
-          },
-        ],
-      },
+        model: CancelacionCita,
+        required: false,
+      }
     ],
   });
-  return res.json(paciente);
+
+  res.status(200).json(appointments);
 });
 
 // Handle doctors
@@ -821,6 +807,52 @@ router.get("/getCitas", authRequired, async (req, res) => {
           {
             model: Doctor,
             required: true,
+            include: [
+              {
+                attributes: ["Correo"],
+                model: User,
+                required: true,
+                where: { idClinica: req.user.idClinica },
+              },
+            ],
+          },
+        ],
+      },
+      {
+        model: CancelacionCita,
+        required: false,
+      }
+    ],
+  });
+
+  res.status(200).json(appointments);
+});
+
+router.get("/getCitasAdmin/:filter", authRequired, async (req, res) => {
+  const { filter } = req.params;
+  const appointments = await Cita.findAll({
+    where: { Estado: true },
+    include: [
+      {
+        attributes: ["id"],
+        model: DocPac,
+        required: true,
+        include: [
+          {
+            model: Paciente,
+            required: true,
+            include: [
+              {
+                attributes: ["Correo"],
+                model: User,
+                required: true,
+              },
+            ],
+          },
+          {
+            model: Doctor,
+            required: filter === "all" ? false : true,
+            where: { id: filter },
             include: [
               {
                 attributes: ["Correo"],
