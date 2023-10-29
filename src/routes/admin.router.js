@@ -614,6 +614,10 @@ router.get("/getPatient/:idPat", authRequired, async (req, res) => {
                 model: User,
                 required: true,
               },
+              {
+                model: Domicilio,
+                required: true,
+              }
             ],
           },
         ],

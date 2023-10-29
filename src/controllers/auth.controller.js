@@ -1,4 +1,4 @@
-import User, { Clinica, Doctor } from "../models/models.js";
+import User, { Clinica, Doctor, Paciente } from "../models/models.js";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../libs/jwt.js";
 import jwt from "jsonwebtoken";
@@ -31,23 +31,20 @@ export const signup = async (req, res) => {
 
     const user = await User.create(parametros);
 
-    const token = await generateToken({
+    let tokenPayload = {
       email: user.Correo,
       id: user.id,
       is_admin: user.is_admin,
       is_doctor: user.is_doctor,
       idClinica: user.idClinica,
-    });
+    };
+
+    const token = await generateToken(tokenPayload);
+
+    tokenPayload.token = token;
 
     res.cookie("token", token, { sameSite: "none", secure: true });
-    res.json({
-      id: user.id,
-      email: user.Correo,
-      is_admin: user.is_admin,
-      is_doctor: user.is_doctor,
-      token: token,
-      idClinica: user.idClinica,
-    });
+    res.json(tokenPayload);
   } catch (error) {
     res.status(400).json({ message: error });
   }
@@ -83,22 +80,22 @@ export const login = async (req, res) => {
       if (doctorFound) {
         tokenPayload.idDoctor = doctorFound.id;
       }
+    }else{
+      const pacienteFound = await Paciente.findOne({ where: { idUser: userFound.id } });
+      if (pacienteFound) {
+        tokenPayload.idPaciente = pacienteFound.id;
+      }
     }
 
     const token = await generateToken(tokenPayload);
 
+    tokenPayload.token = token;
+
     res.cookie("token", token, { sameSite: "none", secure: true });
 
-    res.json({
-      id: userFound.id,
-      idDoctor: tokenPayload.idDoctor,
-      email: userFound.Correo,
-      is_admin: userFound.is_admin,
-      is_doctor: userFound.is_doctor,
-      token: token,
-      idClinica: userFound.idClinica,
-    });
+    res.json(tokenPayload);
   } catch (error) {
+    console.log(error);
     res.status(500).json({ message: error });
   }
 };
@@ -125,14 +122,10 @@ export const verifyToken = async (req, res) => {
 
     if (!userFound) return res.status(401).json({ message: "No autorizado" });
 
-    return res.status(200).json({
-      id: user.id,
-      idDoctor: user.idDoctor,
-      email: user.email,
-      is_admin: user.is_admin,
-      is_doctor: user.is_doctor,
-      token: token,
-      idClinica: user.idClinica,
-    });
+    let userPayload = {...user}
+
+    userPayload.token = token;
+
+    return res.status(200).json(userPayload);
   });
 };

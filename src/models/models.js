@@ -629,8 +629,9 @@ Domicilio.hasOne(Paciente, { foreignKey: "idDomicilio", onDelete: "CASCADE" });
 Paciente.belongsTo(Domicilio, { foreignKey: "idDomicilio" });
 
 Doctor.hasOne(DocPac, { foreignKey: "idDoctor", onDelete: "CASCADE" });
-Paciente.hasOne(DocPac, { foreignKey: "idPaciente", onDelete: "CASCADE" });
+Paciente.hasMany(DocPac, { foreignKey: "idPaciente", onDelete: "CASCADE" });
 DocPac.belongsTo(Doctor, { foreignKey: "idDoctor" });
+//DocPac.belongsTo(Paciente, { foreignKey: "idPaciente" });
 DocPac.belongsTo(Paciente, { foreignKey: "idPaciente" });
 
 DocPac.hasMany(Cita, { foreignKey: "idDocPac", onDelete: "CASCADE" });
