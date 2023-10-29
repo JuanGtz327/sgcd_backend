@@ -756,6 +756,48 @@ router.post("/addCita", authRequired, async (req, res) => {
   }
 });
 
+router.get("/getCitasPaciente", authRequired, async (req, res) => {
+  const appointments = await Cita.findAll({
+    include: [
+      {
+        attributes: ["id"],
+        model: DocPac,
+        include: [
+          {
+            model: Paciente,
+            required: true,
+            include: [
+              {
+                attributes: ["Correo"],
+                model: User,
+                required: true,
+                where: { id: req.user.id },
+              },
+            ],
+          },
+          {
+            model: Doctor,
+            required: true,
+            include: [
+              {
+                attributes: ["Correo"],
+                model: User,
+                required: true,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        model: CancelacionCita,
+        required: false,
+      }
+    ],
+  });
+
+  res.status(200).json(appointments);
+});
+
 router.get("/getCitas", authRequired, async (req, res) => {
   const appointments = await Cita.findAll({
     where: { Estado: true },
@@ -790,6 +832,10 @@ router.get("/getCitas", authRequired, async (req, res) => {
           },
         ],
       },
+      {
+        model: CancelacionCita,
+        required: false,
+      }
     ],
   });
 
@@ -843,6 +889,7 @@ router.get("/getValidCitas/:fecha", authRequired, async (req, res) => {
 
 router.post("/cancelCita", authRequired, async (req, res) => {
   const { id, Motivo } = req.body;
+  const { is_doctor, is_admin } = req.user;
 
   const t = await sequelize.transaction();
 
@@ -851,11 +898,27 @@ router.post("/cancelCita", authRequired, async (req, res) => {
 
     if (!cita) return res.status(404).json({ message: "Cita not found" });
 
-    const cancelacion = await CancelacionCita.create({ idCita: cita.id, Motivo });
+    const citaCancelada = await CancelacionCita.findOne({ where: { idCita: cita.id } });
 
-    await Cita.update({ Estado: false }, { where: { id } });
+    if (citaCancelada && citaCancelada.Pendiente === true) {
+      await CancelacionCita.update({ Pendiente: false }, { where: { idCita: cita.id }, transaction: t });
+    } else {
+      const cancelacionPayload = {
+        idCita: cita.id,
+        Motivo,
+        Pendiente: (is_admin || is_doctor ? false : true)
+      };
+
+      await CancelacionCita.create(cancelacionPayload, { transaction: t });
+    }
+
+    const payload = {
+      Estado: (is_admin || is_doctor ? false : true)
+    };
+
+    await Cita.update(payload, { where: { id: cita.id }, transaction: t });
+    res.status(200).json(cita);
     await t.commit();
-    res.status(200).json(cancelacion);
   } catch (error) {
     await t.rollback();
     res.status(500).json({ message: error });

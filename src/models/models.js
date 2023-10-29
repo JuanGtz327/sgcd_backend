@@ -543,6 +543,11 @@ CancelacionCita.init(
       type: DataTypes.STRING(255),
       allowNull: false,
     },
+    Pendiente: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
   },
   {
     tableName: "CancelacionCita",
