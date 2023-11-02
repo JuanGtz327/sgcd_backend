@@ -462,7 +462,6 @@ router.put("/editProfile", authRequired, async (req, res) => {
       await Doctor.update(NombrePayload, { where: { idUser: id }, transaction: t });
     } else if (!user.is_admin && !user.is_doctor) {
       await Paciente.update(NombrePayload, { where: { idUser: id }, transaction: t });
-      return res.status(200).json(user);
     }
 
     await Domicilio.update(DomicilioPayload, { where: { id: idDomicilio }, transaction: t });
@@ -470,6 +469,7 @@ router.put("/editProfile", authRequired, async (req, res) => {
     await User.update(CredencialesPayload, { where: { id }, transaction: t });
 
     await t.commit();
+    
     res.status(200).json({ message: "Perfil actualizado" });
 
   } catch (error) {
@@ -818,6 +818,19 @@ router.delete("/deletePatient/:idPat", authRequired, async (req, res) => {
   await User.destroy({ where: { id: idPat } });
 
   res.status(200).json({ message: `Patient ${idPat} deleted` });
+});
+
+router.post("/addDocPac", authRequired, async (req, res) => {
+  const { idDoctor, idPaciente } = req.body;
+
+  const docPacPayload = {
+    idDoctor,
+    idPaciente,
+  };
+
+  const docpac = await DocPac.create(docPacPayload);
+
+  res.status(200).json(docpac);
 });
 
 // Handle Citas
