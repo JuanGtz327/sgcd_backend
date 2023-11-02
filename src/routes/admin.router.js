@@ -369,6 +369,116 @@ router.delete("/deleteDoctor/:idDoc", authRequired, async (req, res) => {
   res.status(200).json({ message: `Doctor ${idDoc} deleted` });
 });
 
+// Perfil del usuario
+
+router.get("/getProfile", authRequired, async (req, res) => {
+  const { id, is_admin, is_doctor } = req.user;
+
+  if (!is_admin && is_doctor) {
+    const user = await User.findOne({
+      where: { id },
+      attributes: {
+        exclude: ["Password"],
+      },
+      include: [
+        {
+          model: Doctor,
+          required: true,
+          include: [
+            {
+              model: Domicilio,
+              required: true,
+            }
+          ]
+        }
+      ]
+    });
+    return res.status(200).json(user);
+  } else if (!is_admin && !is_doctor) {
+    const user = await User.findOne({
+      where: { id },
+      attributes: {
+        exclude: ["Password"],
+      },
+      include: [
+        {
+          model: Paciente,
+          required: true,
+          include: [
+            {
+              model: Domicilio,
+              required: true,
+            }
+          ]
+        }
+      ]
+    });
+    return res.status(200).json(user);
+  } else {
+    const user = await User.findOne({
+      where: { id },
+      attributes: {
+        exclude: ["Password"],
+      }
+    });
+    return res.status(200).json(user);
+  }
+});
+
+router.post("/editPassword", authRequired, async (req, res) => {
+  const { LPassword, Password, CPassword, id } = req.body;
+
+  const user = await User.findOne({ where: { id } });
+
+  if (!user) return res.status(404).send({ message: "User not found" });
+
+  const isPasswordValid = await bcrypt.compare(LPassword, user.Password);
+
+  if (!isPasswordValid) {
+    return res.status(400).json({ message: "La contraseña no es valida" });
+  }
+
+  if (Password !== CPassword) {
+    return res.status(400).json({ message: "La contraseñas no coinciden" });
+  }
+
+  const passwordHash = await bcrypt.hash(Password, 10);
+  await User.update({ Password: passwordHash }, { where: { id } });
+
+  res.status(200).json({ message: "Contraseña actualizada" });
+});
+
+router.put("/editProfile", authRequired, async (req, res) => {
+  const { NombrePayload, DomicilioPayload, CredencialesPayload, id, idDomicilio } = req.body;
+
+  const t = await sequelize.transaction();
+
+  try {
+    const user = await User.findOne({ where: { id } });
+
+    if (!user) return res.status(404).send({ message: "User not found" });
+
+    if (!user.is_admin && user.is_doctor) {
+      await Doctor.update(NombrePayload, { where: { idUser: id }, transaction: t });
+    } else if (!user.is_admin && !user.is_doctor) {
+      await Paciente.update(NombrePayload, { where: { idUser: id }, transaction: t });
+      return res.status(200).json(user);
+    }
+
+    await Domicilio.update(DomicilioPayload, { where: { id: idDomicilio }, transaction: t });
+
+    await User.update(CredencialesPayload, { where: { id }, transaction: t });
+
+    await t.commit();
+    res.status(200).json({ message: "Perfil actualizado" });
+
+  } catch (error) {
+    await t.rollback();
+    res.status(500).json({ message: error });
+  }
+
+});
+
 // Handle Patients
 
 router.post("/addPatient", authRequired, async (req, res) => {
