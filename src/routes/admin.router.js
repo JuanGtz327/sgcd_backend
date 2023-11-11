@@ -988,6 +988,7 @@ router.get("/getCitas", authRequired, async (req, res) => {
 
 router.get("/getCitasAdmin/:filter", authRequired, async (req, res) => {
   const { filter } = req.params;
+  const whereCondition = filter === "all" ? { id: { [Op.gt]: 0 } } : {id: filter};
   const appointments = await Cita.findAll({
     where: { Estado: true },
     include: [
@@ -1009,8 +1010,8 @@ router.get("/getCitasAdmin/:filter", authRequired, async (req, res) => {
           },
           {
             model: Doctor,
-            required: filter === "all" ? false : true,
-            where: { id: filter },
+            required: true,
+            where: whereCondition,
             include: [
               {
                 attributes: ["Correo"],
@@ -1122,7 +1123,7 @@ router.put("/editCita", authRequired, async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-
+    console.log(id, Fecha, Diagnostico);
     const citaAgendada = await Cita.findOne({ where: { Fecha, Estado: true }, include: [{ model: DocPac, where: { idDoctor: req.user.idDoctor }, include: [{ model: Paciente, required: true }] }] });
 
     if (citaAgendada) {
