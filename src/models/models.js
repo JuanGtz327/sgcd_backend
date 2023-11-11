@@ -65,33 +65,6 @@ User.init(
   }
 );
 
-class Configuraciones extends Model {}
-
-Configuraciones.init(
-  {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-      allowNull: false,
-    },
-    idUser: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    configuraciones: {
-      type: DataTypes.JSON,
-      allowNull: false,
-      defaultValue: {},
-    }
-  },
-  {
-    tableName: "Configuraciones",
-    sequelize,
-    modelName: "Configuraciones",
-  }
-);
-
 export class Domicilio extends Model {}
 
 Domicilio.init(
@@ -176,6 +149,10 @@ Doctor.init(
       allowNull: false,
     },
     idUser: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    idConfiguraciones:{
       type: DataTypes.INTEGER,
       allowNull: false,
     },
@@ -610,11 +587,41 @@ Receta.init(
   }
 );
 
+export class Configuraciones extends Model {}
+
+Configuraciones.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+      allowNull: false,
+    },
+    Dias_laborables: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: "Lunes-Viernes",
+    },
+    Horario: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: "09:00-18:00",
+    },
+    Duracion_cita: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 30,
+    },
+  },
+  {
+    tableName: "Configuraciones",
+    sequelize,
+    modelName: "Configuraciones",
+  }
+);
+
 Clinica.hasMany(User, { foreignKey: "idClinica" });
 User.belongsTo(Clinica, { foreignKey: "idClinica" });
-
-Configuraciones.belongsTo(User, { foreignKey: "idUser" });
-User.hasOne(Configuraciones, { foreignKey: "idUser", onDelete: "CASCADE" });
 
 User.hasOne(Doctor, { foreignKey: "idUser", onDelete: "CASCADE" });
 Doctor.belongsTo(User, { foreignKey: "idUser" });
@@ -663,5 +670,8 @@ Nota.belongsTo(HistorialClinico, { foreignKey: "idHistorialClinico" });
 
 Cita.hasOne(CancelacionCita, { foreignKey: "idCita", onDelete: "CASCADE" });
 CancelacionCita.belongsTo(Cita, { foreignKey: "idCita" });
+
+Configuraciones.hasOne(Doctor, { foreignKey: "idConfiguraciones", onDelete: "CASCADE" });
+Doctor.belongsTo(Configuraciones, { foreignKey: "idConfiguraciones" });
 
 export default User;

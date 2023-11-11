@@ -19,6 +19,7 @@ import User, {
   HistoriaClinicaActual,
   HistorialClinico,
   Nota,
+  Configuraciones,
 } from "../models/models.js";
 
 router.get("/refresh-db", async (req, res) => {
@@ -229,6 +230,26 @@ router.get("/pruebas", async (req, res) => {
 
 // Handle doctors
 
+router.get("/getDoctorConfigs/:id", authRequired, async (req, res) => {
+  const { id } = req.params;
+  const configs = await Doctor.findOne({
+    where: { id },
+    attributes: {
+      exclude: ["createdAt", "updatedAt"],
+    },
+    include: [
+      {
+        model: Configuraciones,
+        required: true,
+        attributes: {
+          exclude: ["id", "createdAt", "updatedAt"],
+        },
+      },
+    ],
+  });
+  res.status(200).json(configs);
+});
+
 router.post("/addDoctor", authRequired, async (req, res) => {
   const { ...parametros } = req.body;
   const { idClinica } = req.user;
@@ -241,6 +262,16 @@ router.post("/addDoctor", authRequired, async (req, res) => {
       return res
         .status(400)
         .json({ message: "La direccion de correo ya esta en uso" });
+
+    //Guardar las configuraciones del doctor
+
+    const docConfigPayload = {
+      Dias_laborables: parametros.Dias_laborales,
+      Horario: parametros.Horario,
+      Duracion_cita: parametros.Duracion,
+    };
+
+    const docConfig = await Configuraciones.create(docConfigPayload, { transaction: t, });
 
     //Guardar el doctor en la tabla de usuarios
 
@@ -282,6 +313,7 @@ router.post("/addDoctor", authRequired, async (req, res) => {
       Cedula: parametros.Cedula,
       Especialidad: parametros.Especialidad,
       idDomicilio: domicilio.id,
+      idConfiguraciones: docConfig.id,
     };
 
     const doctor = await Doctor.create(doctorPayload, { transaction: t });
@@ -469,7 +501,7 @@ router.put("/editProfile", authRequired, async (req, res) => {
     await User.update(CredencialesPayload, { where: { id }, transaction: t });
 
     await t.commit();
-    
+
     res.status(200).json({ message: "Perfil actualizado" });
 
   } catch (error) {
@@ -1003,6 +1035,7 @@ router.get("/getCitasAdmin/:filter", authRequired, async (req, res) => {
 
 router.get("/getValidCitas/:fecha", authRequired, async (req, res) => {
   const { fecha } = req.params;
+  const whereCondition = req.user.is_admin ? { idDoctor: { [Op.gt]: 0 } } : req.user.idDoctor;
   const appointments = await Cita.findAll({
     where: {
       Estado: true, Fecha: {
@@ -1013,7 +1046,7 @@ router.get("/getValidCitas/:fecha", authRequired, async (req, res) => {
       {
         attributes: ["id"],
         model: DocPac,
-        where: { idDoctor: req.user.idDoctor },
+        where: whereCondition,
         include: [
           {
             model: Paciente,
