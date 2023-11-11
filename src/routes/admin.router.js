@@ -939,7 +939,6 @@ router.get("/getCitasPaciente", authRequired, async (req, res) => {
       }
     ],
   });
-
   res.status(200).json(appointments);
 });
 
