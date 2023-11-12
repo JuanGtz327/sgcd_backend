@@ -351,6 +351,42 @@ router.get("/getDoctors", authRequired, async (req, res) => {
   res.status(200).json(doctors);
 });
 
+router.get("/getPatientDoctors/:idPaciente", authRequired, async (req, res) => {
+  const { idPaciente } = req.params;
+  const doctors = await Doctor.findAll({
+    attributes: {
+      exclude: ["createdAt", "updatedAt"],
+    },
+    include: [
+      {
+        model: User,
+        attributes: ["Correo", "idClinica"],
+        required: true,
+        where: { idClinica: req.user.idClinica },
+      },
+      {
+        model: Domicilio,
+        required: true,
+        attributes: {
+          exclude: ["id", "createdAt", "updatedAt"],
+        },
+      },
+      {
+        model: DocPac,
+        required: true,
+        include: [
+          {
+            model: Paciente,
+            required: true,
+            where: { id: idPaciente },
+          },
+        ],
+      },
+    ],
+  });
+  res.status(200).json(doctors);
+});
+
 router.put("/editDoctor/:idDoc", authRequired, async (req, res) => {
   const { ...parametros } = req.body;
   const { idDoc } = req.params;
@@ -901,12 +937,48 @@ router.post("/addCita", authRequired, async (req, res) => {
   }
 });
 
-router.get("/getCitasPaciente", authRequired, async (req, res) => {
+router.post("/addPatientCita", authRequired, async (req, res) => {
+  const { ...parametros } = req.body;
+  const t = await sequelize.transaction();
+  try {
+
+    const citaAgendada = await Cita.findOne({
+      where: { Fecha: parametros.Fecha, Estado: true },
+      include: [{
+        model: DocPac, where: { idPaciente: req.user.idPaciente },
+        include: [{ model: Doctor, required: true }]
+      }]
+    });
+
+    if (citaAgendada) {
+      return res.status(400).json({ message: `Ya tiene agendada una cita con ${citaAgendada.DocPac.Doctor.Nombre} ${citaAgendada.DocPac.Doctor.ApellidoP}` });
+    }
+
+    //Obtener el historial clinico del paciente
+    const historial_clinico = await HistorialClinico.findOne({
+      where: { idPaciente: req.user.idPaciente },
+    });
+
+    parametros.idHistorialClinico = historial_clinico.id;
+
+    const cita = await Cita.create(parametros, { transaction: t });
+    res.json(cita);
+    await t.commit();
+  } catch (error) {
+    await t.rollback();
+    res.status(500).json({ message: error });
+  }
+});
+
+router.get("/getCitasPaciente/:filter", authRequired, async (req, res) => {
+  const { filter } = req.params;
+  const whereCondition = filter === "all" ? { id: { [Op.gt]: 0 } } : {id: filter};
   const appointments = await Cita.findAll({
     include: [
       {
         attributes: ["id"],
         model: DocPac,
+        required: true,
         include: [
           {
             model: Paciente,
@@ -923,6 +995,7 @@ router.get("/getCitasPaciente", authRequired, async (req, res) => {
           {
             model: Doctor,
             required: true,
+            where: whereCondition,
             include: [
               {
                 attributes: ["Correo"],
@@ -942,18 +1015,20 @@ router.get("/getCitasPaciente", authRequired, async (req, res) => {
   res.status(200).json(appointments);
 });
 
-router.get("/getCitas", authRequired, async (req, res) => {
+router.get("/getCitas/:filter", authRequired, async (req, res) => {
+  const { filter } = req.params;
+  const whereCondition = filter === "all" ? { id: { [Op.gt]: 0 } } : {id: filter};
   const appointments = await Cita.findAll({
-    where: { Estado: true },
     include: [
       {
         attributes: ["id"],
         model: DocPac,
-        where: { idDoctor: req.user.idDoctor },
+        required: true,
         include: [
           {
             model: Paciente,
             required: true,
+            where: whereCondition,
             include: [
               {
                 attributes: ["Correo"],
@@ -965,6 +1040,7 @@ router.get("/getCitas", authRequired, async (req, res) => {
           {
             model: Doctor,
             required: true,
+            where: { id: req.user.idDoctor },
             include: [
               {
                 attributes: ["Correo"],
@@ -982,7 +1058,6 @@ router.get("/getCitas", authRequired, async (req, res) => {
       }
     ],
   });
-
   res.status(200).json(appointments);
 });
 
@@ -1123,7 +1198,6 @@ router.put("/editCita", authRequired, async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-    console.log(id, Fecha, Diagnostico);
     const citaAgendada = await Cita.findOne({ where: { Fecha, Estado: true }, include: [{ model: DocPac, where: { idDoctor: req.user.idDoctor }, include: [{ model: Paciente, required: true }] }] });
 
     if (citaAgendada) {
