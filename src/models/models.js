@@ -1,70 +1,6 @@
 import { DataTypes, Model } from "sequelize";
 import sequelize from "../db.js";
 
-export class Clinica extends Model {}
-
-Clinica.init(
-  {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-      allowNull: false,
-    },
-    Nombre: {
-      type: DataTypes.STRING(50),
-      allowNull: false,
-      unique: true,
-    },
-  },
-  {
-    tableName: "Clinica",
-    sequelize,
-    modelName: "Clinica",
-  }
-);
-
-class User extends Model {}
-
-User.init(
-  {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-      allowNull: false,
-    },
-    Correo: {
-      type: DataTypes.STRING(50),
-      allowNull: false,
-      unique: true,
-    },
-    Password: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    is_admin: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-    },
-    is_doctor: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: true,
-    },
-    idClinica: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-  },
-  {
-    tableName: "User",
-    sequelize,
-    modelName: "User",
-  }
-);
-
 export class Domicilio extends Model {}
 
 Domicilio.init(
@@ -112,6 +48,78 @@ Domicilio.init(
     tableName: "Domicilio",
     sequelize,
     modelName: "Domicilio",
+  }
+);
+
+export class Clinica extends Model {}
+
+Clinica.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+      allowNull: false,
+    },
+    Nombre: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      unique: true,
+    },
+    Descripcion: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    idDomicilio: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+  },
+  {
+    tableName: "Clinica",
+    sequelize,
+    modelName: "Clinica",
+  }
+);
+
+class User extends Model {}
+
+User.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+      allowNull: false,
+    },
+    Correo: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      unique: true,
+    },
+    Password: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    is_admin: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    is_doctor: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
+    idClinica: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+  },
+  {
+    tableName: "User",
+    sequelize,
+    modelName: "User",
   }
 );
 
@@ -619,6 +627,9 @@ Configuraciones.init(
     modelName: "Configuraciones",
   }
 );
+
+Domicilio.hasOne(Clinica, { foreignKey: "idDomicilio", onDelete: "CASCADE" });
+Clinica.belongsTo(Domicilio, { foreignKey: "idDomicilio" });
 
 Clinica.hasMany(User, { foreignKey: "idClinica" });
 User.belongsTo(Clinica, { foreignKey: "idClinica" });

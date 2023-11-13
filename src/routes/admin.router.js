@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import { authRequired } from "../middlewares/validateToken.js";
 
 import User, {
+  Clinica,
   Doctor,
   Paciente,
   DocPac,
@@ -1273,6 +1274,63 @@ router.post("/addHistoriaClinicaActual", authRequired, async (req, res) => {
   );
 
   res.status(200).json(historiaClinicaActual);
+});
+
+//Handle clincia
+
+router.get("/getClinica", authRequired, async (req, res) => {
+  const clinica = await Clinica.findOne({
+    where: { id: req.user.idClinica },
+    attributes: {
+      exclude: ["idDomicilio", "createdAt", "updatedAt"],
+    },
+    include: [
+      {
+        model: User,
+        attributes: ["Correo", "idClinica"],
+        required: true,
+      },
+      {
+        model: Domicilio,
+        required: false,
+        attributes: {
+          exclude: ["id", "createdAt", "updatedAt"],
+        },
+      },
+    ],
+  });
+  res.status(200).json(clinica);
+});
+
+router.put("/editClinica", authRequired, async (req, res) => {
+  
+  const {...parametros} = req.body;
+
+  const t = await sequelize.transaction();
+
+  try {
+    const clinica = await Clinica.findOne({ where: { id: req.user.idClinica } });
+
+    if (!clinica) return res.status(404).send({ message: "Clinica not found" });
+
+    await Clinica.update(parametros.clinicaPayload, { where: { id: req.user.idClinica }, transaction: t });
+
+    if (clinica.idDomicilio) {
+      await Domicilio.update(parametros.domicilioPayload, { where: { id: clinica.idDomicilio }, transaction: t });
+    }else{
+      const domicilio = await Domicilio.create(parametros.domicilioPayload, { transaction: t });
+      await Clinica.update({ idDomicilio: domicilio.id }, { where: { id: req.user.idClinica }, transaction: t });
+    }
+
+    await t.commit();
+
+    res.status(200).json({ message: "Clinica actualizada" });
+
+  } catch (error) {
+    await t.rollback();
+    res.status(500).json({ message: error });
+  }
+
 });
 
 export default router;
