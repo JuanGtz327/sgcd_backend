@@ -550,7 +550,7 @@ router.put("/editProfile", authRequired, async (req, res) => {
 
 // Handle Patients
 
-router.post("/addPatient", authRequired, async (req, res) => {
+router.post("/addPatient/:doctorID", authRequired, async (req, res) => {
   const {
     pacientePayload,
     domicilioPayload,
@@ -563,8 +563,12 @@ router.post("/addPatient", authRequired, async (req, res) => {
     preAppointments,
     notas,
   } = req.body;
+  const { doctorID } = req.params;
+  let { idClinica, idDoctor } = req.user;
 
-  const { idClinica, idDoctor } = req.user;
+  if (req.user.is_admin && doctorID) 
+    idDoctor = doctorID;
+
   const t = await sequelize.transaction();
   try {
     if (!idDoctor)
@@ -702,6 +706,50 @@ router.get("/getPatients", authRequired, async (req, res) => {
             attributes: ["Nombre", "ApellidoP", "ApellidoM"],
             required: true,
             where: { id: req.user.idDoctor },
+            include: [
+              {
+                model: User,
+                attributes: ["Correo", "idClinica"],
+                required: true,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        model: User,
+        attributes: ["Correo", "idClinica"],
+        required: true,
+      },
+      {
+        model: Domicilio,
+        required: true,
+        attributes: {
+          exclude: ["id", "createdAt", "updatedAt"],
+        },
+      },
+    ],
+  });
+  res.status(200).json(patients);
+});
+
+router.get("/getPatientsByDoctor/:idDoctor", authRequired, async (req, res) => {
+  const { idDoctor } = req.params;
+  const patients = await Paciente.findAll({
+    attributes: {
+      exclude: ["idDomicilio", "createdAt", "updatedAt"],
+    },
+    include: [
+      {
+        model: DocPac,
+        attributes: ["id"],
+        required: true,
+        include: [
+          {
+            model: Doctor,
+            attributes: ["Nombre", "ApellidoP", "ApellidoM"],
+            required: true,
+            where: { id: idDoctor },
             include: [
               {
                 model: User,
@@ -930,6 +978,50 @@ router.post("/addCita", authRequired, async (req, res) => {
     parametros.idHistorialClinico = historial_clinico.id;
 
     const cita = await Cita.create(parametros, { transaction: t });
+    res.json(cita);
+    await t.commit();
+  } catch (error) {
+    console.log(error);
+    await t.rollback();
+    res.status(500).json({ message: error });
+  }
+});
+
+router.post("/addCitaAdmin", authRequired, async (req, res) => {
+  const { idDoctor,idPaciente,Fecha,Diagnostico } = req.body;
+  const t = await sequelize.transaction();
+  try {
+
+    const citaAgendada = await Cita.findOne({
+      where: { Fecha, Estado: true },
+      include: [{
+        model: DocPac, where: { idDoctor },
+        include: [{ model: Paciente, required: true }]
+      }]
+    });
+
+    if (citaAgendada) {
+      return res.status(400).json({ message: `El doctor ya tiene agendada una cita con ${citaAgendada.DocPac.Paciente.Nombre} ${citaAgendada.DocPac.Paciente.ApellidoP}` });
+    }
+
+    //Obtener el historial clinico del paciente
+    const historial_clinico = await HistorialClinico.findOne({
+      where: { idPaciente },
+    });
+
+    //ObtenerDocPac
+    const docpac = await DocPac.findOne({
+      where: { idDoctor, idPaciente },
+    });
+
+    const citaPayload = {
+      Fecha,
+      Diagnostico,
+      idHistorialClinico: historial_clinico.id,
+      idDocPac: docpac.id
+    }
+
+    const cita = await Cita.create(citaPayload, { transaction: t });
     res.json(cita);
     await t.commit();
   } catch (error) {
