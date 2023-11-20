@@ -5,6 +5,17 @@ import { Op } from "sequelize";
 
 import bcrypt from "bcryptjs";
 import { authRequired } from "../middlewares/validateToken.js";
+import {horaEnRango,tieneDosHorasDeDiferencia} from '../libs/libs.js'
+
+import dayjs from "dayjs";
+import "dayjs/locale/es.js";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.locale("es");
+const currentDate = dayjs().tz("America/Mexico_City");
 
 import User, {
   Clinica,
@@ -272,6 +283,11 @@ router.post("/addDoctor", authRequired, async (req, res) => {
       Duracion_cita: parametros.Duracion,
     };
 
+    if (!tieneDosHorasDeDiferencia(docConfigPayload.Horario.split("-")[0], docConfigPayload.Horario.split("-")[1])) {
+      await t.rollback();
+      return res.status(400).json({ message: "El horario de trabajo debe tener minimo una duracion de 2 horas" });
+    }
+
     const docConfig = await Configuraciones.create(docConfigPayload, { transaction: t, });
 
     //Guardar el doctor en la tabla de usuarios
@@ -352,6 +368,43 @@ router.get("/getDoctors", authRequired, async (req, res) => {
   res.status(200).json(doctors);
 });
 
+router.get("/getDoctor/:idDoctor", authRequired, async (req, res) => {
+  const { idDoctor } = req.params;
+  const doctor = await Doctor.findOne({
+    where: { id: idDoctor },
+    attributes: {
+      exclude: ["createdAt", "updatedAt"],
+    },
+    include: [
+      {
+        model: User,
+        attributes: ["Correo", "idClinica"],
+        required: true,
+        where: { idClinica: req.user.idClinica },
+      },
+      {
+        model: Domicilio,
+        required: true,
+        attributes: {
+          exclude: ["id", "createdAt", "updatedAt"],
+        },
+      },
+      {
+        model: Configuraciones,
+        required: true,
+        attributes: {
+          exclude: ["id", "createdAt", "updatedAt"],
+        },
+      },
+      {
+        model: DocPac,
+        required: true,
+      }
+    ],
+  });
+  res.status(200).json(doctor);
+});
+
 router.get("/getPatientDoctors/:idPaciente", authRequired, async (req, res) => {
   const { idPaciente } = req.params;
   const doctors = await Doctor.findAll({
@@ -391,43 +444,177 @@ router.get("/getPatientDoctors/:idPaciente", authRequired, async (req, res) => {
 router.put("/editDoctor/:idDoc", authRequired, async (req, res) => {
   const { ...parametros } = req.body;
   const { idDoc } = req.params;
-  if (!idDoc)
-    return res.status(400).send({ message: "You must provide an Id_Doctor" });
 
-  const doctor = await Doctor.findOne({ where: { id: idDoc } });
-  if (!doctor) return res.status(404).send({ message: "Doctor not found" });
-  const updatedDoctor = await Doctor.update(parametros, {
-    where: { id: idDoc },
-  });
+  const t = await sequelize.transaction();
 
-  //Actualizar el usuario con el correo del doctor si se paso como parametro
+  try {
+    if (!idDoc)
+      return res.status(400).send({ message: "You must provide an Id_Doctor" });
 
-  if (parametros.Correo) {
-    //Consultar si el email ya esta en uso
-    const userExists = await User.findOne({
-      where: { Correo: parametros.Correo },
+    const doctor = await Doctor.findOne({ where: { id: idDoc } });
+    if (!doctor) return res.status(404).send({ message: "Doctor not found" });
+    const updatedDoctor = await Doctor.update(parametros, {
+      where: { id: idDoc },
+      transaction: t,
     });
-    if (userExists)
-      return res
-        .status(400)
-        .json({ message: "La direccion de correo ya esta en uso" });
 
-    const user = await User.findOne({ where: { id: doctor.idUser } });
-    if (!user) return res.status(404).send({ message: "User not found" });
-    await User.update(
-      { Correo: parametros.Correo },
-      { where: { id: user.id } }
-    );
+    //Actualizar el usuario con el correo del doctor si se paso como parametro
+
+    if (parametros.Correo) {
+      //Consultar si el email ya esta en uso
+      const userExists = await User.findOne({
+        where: { Correo: parametros.Correo },
+      });
+      if (userExists)
+        return res
+          .status(400)
+          .json({ message: "La direccion de correo ya esta en uso" });
+
+      const user = await User.findOne({ where: { id: doctor.idUser } });
+      if (!user) return res.status(404).send({ message: "User not found" });
+      await User.update(
+        { Correo: parametros.Correo },
+        { where: { id: user.id }, transaction: t }
+      );
+    }
+
+    if (parametros.Password) {
+      const passwordHash = await bcrypt.hash(parametros.Password, 10);
+      const user = await User.findOne({ where: { id: doctor.idUser } });
+      if (!user) return res.status(404).send({ message: "User not found" });
+      await User.update({ Password: passwordHash }, { where: { id: user.id }, transaction: t });
+    }
+
+    if (parametros.DomicilioPayload) {
+      const domicilio = await Domicilio.findOne({ where: { id: doctor.idDomicilio } });
+      if (!domicilio) return res.status(404).send({ message: "Domicilio not found" });
+      await Domicilio.update(parametros.DomicilioPayload, { where: { id: domicilio.id }, transaction: t });
+    }
+
+    await t.commit();
+    res.status(200).send(updatedDoctor);
+  } catch (error) {
+    await t.rollback();
+    res.status(500).json({ message: error });
   }
+});
 
-  if (parametros.Password) {
-    const passwordHash = await bcrypt.hash(parametros.Password, 10);
-    const user = await User.findOne({ where: { id: doctor.idUser } });
-    if (!user) return res.status(404).send({ message: "User not found" });
-    await User.update({ Password: passwordHash }, { where: { id: user.id } });
+router.put("/editDoctorConfigs/:idDoc", authRequired, async (req, res) => {
+  const { configuracionesPayload } = req.body;
+  const { idDoc } = req.params;
+
+  const t = await sequelize.transaction();
+
+  try {
+    if (!idDoc)
+      return res.status(400).send({ message: "You must provide an Id_Doctor" });
+
+    const doctor = await Doctor.findOne({ where: { id: idDoc } });
+    if (!doctor) return res.status(404).send({ message: "Doctor not found" });
+
+    const configuraciones = await Configuraciones.findOne({ where: { id: doctor.idConfiguraciones } });
+    if (!configuraciones) return res.status(404).send({ message: "Configuraciones not found" });
+
+    //Checar que no haya citas agendadas en dias que se quieren eliminar
+
+    const citas = await Cita.findAll({
+      where: { Estado: true },
+      include: [
+        {
+          attributes: ["id"],
+          model: DocPac,
+          required: true,
+          include: [
+            {
+              model: Paciente,
+              required: true,
+              include: [
+                {
+                  attributes: ["Correo"],
+                  model: User,
+                  required: true,
+                },
+              ],
+            },
+            {
+              model: Doctor,
+              required: true,
+              where: { id: idDoc },
+              include: [
+                {
+
+                  attributes: ["Correo"],
+                  model: User,
+                  required: true,
+                  where: { idClinica: req.user.idClinica },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: CancelacionCita,
+          required: false,
+        }
+      ],
+    });
+
+    const days = [
+      "Domingo",
+      "Lunes",
+      "Martes",
+      "Miercoles",
+      "Jueves",
+      "Viernes",
+      "Sabado",
+    ];
+
+    const citasAgendadas = citas.filter(cita => {
+      if (currentDate.isAfter(dayjs(cita.Fecha).tz("America/Mexico_City")))
+        return false;
+      const citaDate = dayjs(cita.Fecha).tz("America/Mexico_City");
+      return !configuracionesPayload.Dias_laborables.includes(days[citaDate.day()]);
+    });
+
+    if (citasAgendadas.length > 0) {
+      await t.rollback();
+      return res.status(400).json({ message: "No se pueden eliminar dias que ya tienen citas agendadas" });
+    }
+
+    //Checar que no haya citas agendadas en horas que se quieren eliminar
+
+    const citasHoras = citas.filter(cita => {
+      if (currentDate.isAfter(dayjs(cita.Fecha).tz("America/Mexico_City")))
+        return false;
+      const citaDate = dayjs(cita.Fecha).tz("America/Mexico_City");
+      const citaHora = citaDate.format("HH:mm");
+      return !horaEnRango(citaHora, configuracionesPayload.Horario.split("-")[0], configuracionesPayload.Horario.split("-")[1]);
+    });
+
+    if (citasHoras.length > 0) {
+      await t.rollback();
+      return res.status(400).json({ message: "No se puede actualizar el horario por que hay una cita fuera de rango" });
+    }
+
+    //Verificar que el horario tenga una duracion de 2 horas
+
+    if (!tieneDosHorasDeDiferencia(configuracionesPayload.Horario.split("-")[0], configuracionesPayload.Horario.split("-")[1])) {
+      await t.rollback();
+      return res.status(400).json({ message: "El horario de trabajo debe tener minimo una duracion de 2 horas" });
+    }
+
+    const updatedConfiguraciones = await Configuraciones.update(configuracionesPayload, {
+      where: { id: configuraciones.id },
+      transaction: t,
+    });
+
+    await t.commit();
+    res.status(200).send(updatedConfiguraciones);
+  } catch (error) {
+    console.log(error);
+    await t.rollback();
+    res.status(500).json({ message: error });
   }
-
-  res.status(200).send(updatedDoctor);
 });
 
 router.delete("/deleteDoctor/:idDoc", authRequired, async (req, res) => {
@@ -566,7 +753,7 @@ router.post("/addPatient/:doctorID", authRequired, async (req, res) => {
   const { doctorID } = req.params;
   let { idClinica, idDoctor } = req.user;
 
-  if (req.user.is_admin && doctorID) 
+  if (req.user.is_admin && doctorID)
     idDoctor = doctorID;
 
   const t = await sequelize.transaction();
@@ -988,7 +1175,7 @@ router.post("/addCita", authRequired, async (req, res) => {
 });
 
 router.post("/addCitaAdmin", authRequired, async (req, res) => {
-  const { idDoctor,idPaciente,Fecha,Diagnostico } = req.body;
+  const { idDoctor, idPaciente, Fecha, Diagnostico } = req.body;
   const t = await sequelize.transaction();
   try {
 
@@ -1065,7 +1252,7 @@ router.post("/addPatientCita", authRequired, async (req, res) => {
 
 router.get("/getCitasPaciente/:filter", authRequired, async (req, res) => {
   const { filter } = req.params;
-  const whereCondition = filter === "all" ? { id: { [Op.gt]: 0 } } : {id: filter};
+  const whereCondition = filter === "all" ? { id: { [Op.gt]: 0 } } : { id: filter };
   const appointments = await Cita.findAll({
     include: [
       {
@@ -1110,7 +1297,7 @@ router.get("/getCitasPaciente/:filter", authRequired, async (req, res) => {
 
 router.get("/getCitas/:filter", authRequired, async (req, res) => {
   const { filter } = req.params;
-  const whereCondition = filter === "all" ? { id: { [Op.gt]: 0 } } : {id: filter};
+  const whereCondition = filter === "all" ? { id: { [Op.gt]: 0 } } : { id: filter };
   const appointments = await Cita.findAll({
     include: [
       {
@@ -1156,7 +1343,7 @@ router.get("/getCitas/:filter", authRequired, async (req, res) => {
 
 router.get("/getCitasAdmin/:filter", authRequired, async (req, res) => {
   const { filter } = req.params;
-  const whereCondition = filter === "all" ? { id: { [Op.gt]: 0 } } : {id: filter};
+  const whereCondition = filter === "all" ? { id: { [Op.gt]: 0 } } : { id: filter };
   const appointments = await Cita.findAll({
     where: { Estado: true },
     include: [
@@ -1395,8 +1582,8 @@ router.get("/getClinica", authRequired, async (req, res) => {
 });
 
 router.put("/editClinica", authRequired, async (req, res) => {
-  
-  const {...parametros} = req.body;
+
+  const { ...parametros } = req.body;
 
   const t = await sequelize.transaction();
 
@@ -1409,7 +1596,7 @@ router.put("/editClinica", authRequired, async (req, res) => {
 
     if (clinica.idDomicilio) {
       await Domicilio.update(parametros.domicilioPayload, { where: { id: clinica.idDomicilio }, transaction: t });
-    }else{
+    } else {
       const domicilio = await Domicilio.create(parametros.domicilioPayload, { transaction: t });
       await Clinica.update({ idDomicilio: domicilio.id }, { where: { id: req.user.idClinica }, transaction: t });
     }
