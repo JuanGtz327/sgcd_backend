@@ -45,7 +45,7 @@ Domicilio.init(
     }
   },
   {
-    tableName: "Domicilio",
+    tableName: "domicilio",
     sequelize,
     modelName: "Domicilio",
   }
@@ -76,7 +76,7 @@ Clinica.init(
     },
   },
   {
-    tableName: "Clinica",
+    tableName: "clinica",
     sequelize,
     modelName: "Clinica",
   }
@@ -117,7 +117,7 @@ User.init(
     },
   },
   {
-    tableName: "User",
+    tableName: "user",
     sequelize,
     modelName: "User",
   }
@@ -139,7 +139,7 @@ Especialidad.init(
     },
   },
   {
-    tableName: "Especialidad",
+    tableName: "especialidad",
     sequelize,
     modelName: "Especialidad",
     timestamps: false,
@@ -194,7 +194,7 @@ Doctor.init(
     }
   },
   {
-    tableName: "Doctor",
+    tableName: "doctor",
     sequelize,
     modelName: "Doctor",
   }
@@ -244,7 +244,7 @@ Paciente.init(
     },
   },
   {
-    tableName: "Paciente",
+    tableName: "paciente",
     sequelize,
     modelName: "Paciente",
   }
@@ -270,7 +270,7 @@ DocPac.init(
     },
   },
   {
-    tableName: "DocPac",
+    tableName: "docpac",
     sequelize,
     modelName: "DocPac",
   }
@@ -465,7 +465,7 @@ Nota.init(
     }
   },
   {
-    tableName: "Nota",
+    tableName: "nota",
     sequelize,
     modelName: "Nota",
   }
@@ -504,7 +504,7 @@ Cita.init(
     }
   },
   {
-    tableName: "Cita",
+    tableName: "cita",
     sequelize,
     modelName: "Cita",
   }
@@ -535,7 +535,7 @@ CancelacionCita.init(
     },
   },
   {
-    tableName: "CancelacionCita",
+    tableName: "cancelacioncita",
     sequelize,
     modelName: "CancelacionCita",
   }
@@ -589,7 +589,7 @@ Receta.init(
     },
   },
   {
-    tableName: "Receta",
+    tableName: "receta",
     sequelize,
     modelName: "Receta",
   }
@@ -622,7 +622,7 @@ Configuraciones.init(
     },
   },
   {
-    tableName: "Configuraciones",
+    tableName: "configuraciones",
     sequelize,
     modelName: "Configuraciones",
   }

@@ -5,7 +5,9 @@ services:
   mysqldb:
     image: mysql
     environment:
-      MYSQL_ROOT_PASSWORD: 12345  
+      MYSQL_ROOT_PASSWORD: Pollas123+
       MYSQL_DATABASE: sgcd
     ports:
       - 3307:3306
+    volumes:
+      - ./sgcd.sql:/docker-entrypoint-initdb.d/sgcd.sql
