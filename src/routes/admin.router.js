@@ -1345,7 +1345,6 @@ router.get("/getCitasAdmin/:filter", authRequired, async (req, res) => {
   const { filter } = req.params;
   const whereCondition = filter === "all" ? { id: { [Op.gt]: 0 } } : { id: filter };
   const appointments = await Cita.findAll({
-    where: { Estado: true },
     include: [
       {
         attributes: ["id"],
@@ -1472,6 +1471,34 @@ router.post("/cancelCita", authRequired, async (req, res) => {
   }
 });
 
+router.post("/cancelConfirmCita", authRequired, async (req, res) => {
+  const { idCita } = req.body;
+
+  const t = await sequelize.transaction();
+
+  try {
+    const cita = await Cita.findOne({ where: { id:idCita } });
+
+    if (!cita) return res.status(404).json({ message: "Cita not found" });
+
+    const citaCancelada = await CancelacionCita.findOne({ where: { idCita } });
+
+    if (!citaCancelada) return res.status(404).json({ message: "Cancelacion not found" });
+
+    if (citaCancelada.Pendiente === false) return res.status(400).json({ message: "La cita ya fue cancelada" });
+
+    await CancelacionCita.update({ Pendiente: false }, { where: { idCita }, transaction: t });
+
+    await Cita.update({ Estado: false }, { where: { id: cita.id }, transaction: t });
+
+    res.status(200).json(cita);
+    await t.commit();
+  } catch (error) {
+    await t.rollback();
+    res.status(500).json({ message: error });
+  }
+});
+
 router.put("/editCita", authRequired, async (req, res) => {
   const { id, Fecha, Diagnostico } = req.body;
 
@@ -1489,6 +1516,15 @@ router.put("/editCita", authRequired, async (req, res) => {
     if (!cita) return res.status(404).json({ message: "Cita not found" });
 
     await Cita.update({ Fecha, Diagnostico }, { where: { id } });
+
+    //Si estaba pendiente de cancelacion, eliminar la referencia
+
+    const citaCancelada = await CancelacionCita.findOne({ where: { idCita: cita.id } });
+
+    if (citaCancelada) {
+      await CancelacionCita.destroy({ where: { idCita: cita.id }, transaction: t });
+    }
+
     await t.commit();
     res.status(200).json(cita);
   } catch (error) {
