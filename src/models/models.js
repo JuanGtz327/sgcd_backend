@@ -551,28 +551,12 @@ Receta.init(
       autoIncrement: true,
       allowNull: false,
     },
-    idCita: {
+    idHistoriaClinicaActual: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    Medicamento: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    Unidad: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    Dosis: {
+    idDocPac: {
       type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    Frecuencia: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    Via_administracion: {
-      type: DataTypes.STRING,
       allowNull: false,
     },
     Fecha_inicio: {
@@ -585,13 +569,51 @@ Receta.init(
     },
     Indicaciones: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
     },
   },
   {
     tableName: "receta",
     sequelize,
     modelName: "Receta",
+  }
+);
+
+export class Medicamento extends Model {}
+
+Medicamento.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+      allowNull: false,
+    },
+    idReceta: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    Nombre: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    Dosis: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    Frecuencia: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    Via_administracion: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+  },
+  {
+    tableName: "medicamento",
+    sequelize,
+    modelName: "Medicamento",
   }
 );
 
@@ -649,14 +671,16 @@ Paciente.belongsTo(Domicilio, { foreignKey: "idDomicilio" });
 Doctor.hasOne(DocPac, { foreignKey: "idDoctor", onDelete: "CASCADE" });
 Paciente.hasMany(DocPac, { foreignKey: "idPaciente", onDelete: "CASCADE" });
 DocPac.belongsTo(Doctor, { foreignKey: "idDoctor" });
-//DocPac.belongsTo(Paciente, { foreignKey: "idPaciente" });
 DocPac.belongsTo(Paciente, { foreignKey: "idPaciente" });
 
 DocPac.hasMany(Cita, { foreignKey: "idDocPac", onDelete: "CASCADE" });
 Cita.belongsTo(DocPac, { foreignKey: "idDocPac" });
 
-Cita.hasMany(Receta, { foreignKey: "idCita", onDelete: "CASCADE" });
-Receta.belongsTo(Cita, { foreignKey: "idCita" });
+DocPac.hasMany(Receta, { foreignKey: "idDocPac", onDelete: "CASCADE" });
+Receta.belongsTo(DocPac, { foreignKey: "idDocPac" });
+
+HistoriaClinicaActual.hasOne(Receta, { foreignKey: "idHistoriaClinicaActual", onDelete: "CASCADE" });
+Receta.belongsTo(HistoriaClinicaActual, { foreignKey: "idHistoriaClinicaActual" });
 
 DocPac.hasMany(Nota, { foreignKey: "idDocPac", onDelete: "CASCADE" });
 Nota.belongsTo(DocPac, { foreignKey: "idDocPac" });
@@ -684,5 +708,8 @@ CancelacionCita.belongsTo(Cita, { foreignKey: "idCita" });
 
 Configuraciones.hasOne(Doctor, { foreignKey: "idConfiguraciones", onDelete: "CASCADE" });
 Doctor.belongsTo(Configuraciones, { foreignKey: "idConfiguraciones" });
+
+Receta.hasMany(Medicamento, { foreignKey: "idReceta", onDelete: "CASCADE" });
+Medicamento.belongsTo(Receta, { foreignKey: "idReceta" });
 
 export default User;

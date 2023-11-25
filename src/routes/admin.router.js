@@ -5,7 +5,7 @@ import { Op } from "sequelize";
 
 import bcrypt from "bcryptjs";
 import { authRequired } from "../middlewares/validateToken.js";
-import {horaEnRango,tieneDosHorasDeDiferencia} from '../libs/libs.js'
+import { horaEnRango, tieneDosHorasDeDiferencia } from '../libs/libs.js'
 
 import dayjs from "dayjs";
 import "dayjs/locale/es.js";
@@ -32,6 +32,8 @@ import User, {
   HistorialClinico,
   Nota,
   Configuraciones,
+  Receta,
+  Medicamento,
 } from "../models/models.js";
 
 router.get("/refresh-db", async (req, res) => {
@@ -370,6 +372,9 @@ router.get("/getDoctors", authRequired, async (req, res) => {
 
 router.get("/getDoctor/:idDoctor", authRequired, async (req, res) => {
   const { idDoctor } = req.params;
+
+  const includeDocPacs = await DocPac.findAll({ where: { idDoctor }, });
+
   const doctor = await Doctor.findOne({
     where: { id: idDoctor },
     attributes: {
@@ -398,7 +403,7 @@ router.get("/getDoctor/:idDoctor", authRequired, async (req, res) => {
       },
       {
         model: DocPac,
-        required: true,
+        required: includeDocPacs.length > 0 ? true : false,
       }
     ],
   });
@@ -1059,6 +1064,18 @@ router.get("/getPatient/:idPat", authRequired, async (req, res) => {
           {
             model: HistoriaClinicaActual,
             required: true,
+            include: [
+              {
+                model: Receta,
+                required: false,
+                include: [
+                  {
+                    model: Medicamento,
+                    required: true,
+                  }
+                ]
+              },
+            ],
           },
           {
             model: Cita,
@@ -1477,7 +1494,7 @@ router.post("/cancelConfirmCita", authRequired, async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-    const cita = await Cita.findOne({ where: { id:idCita } });
+    const cita = await Cita.findOne({ where: { id: idCita } });
 
     if (!cita) return res.status(404).json({ message: "Cita not found" });
 
@@ -1591,6 +1608,16 @@ router.post("/addHistoriaClinicaActual", authRequired, async (req, res) => {
   res.status(200).json(historiaClinicaActual);
 });
 
+router.get("/getHistoriaClinicaActual/:idHC", authRequired, async (req, res) => {
+  const { idHC } = req.params;
+
+  const historiaClinicaActual = await HistoriaClinicaActual.findOne({
+    where: { id: idHC },
+  });
+
+  res.status(200).json(historiaClinicaActual);
+});
+
 //Handle clincia
 
 router.get("/getClinica", authRequired, async (req, res) => {
@@ -1646,6 +1673,68 @@ router.put("/editClinica", authRequired, async (req, res) => {
     res.status(500).json({ message: error });
   }
 
+});
+
+//Handle Recetas
+
+router.post("/addReceta", authRequired, async (req, res) => {
+  const { ...parametros } = req.body;
+
+  const t = await sequelize.transaction();
+  try {
+    const firma = parametros.Firma;
+
+    //Verificar la contraseña del doctor
+    const doctor = await Doctor.findOne({
+      where: { id: req.user.idDoctor },
+      include: [{ model: User }],
+    });
+    const isPasswordValid = await bcrypt.compare(
+      firma,
+      doctor.User.Password
+    );
+
+    if (!isPasswordValid) {
+      return res.status(400).json({ message: "La contraseña es invalida" });
+    }
+
+    //Obtener la relacion de docpac
+    const docpac = await DocPac.findOne({
+      where: { idDoctor: req.user.idDoctor, idPaciente: parametros.idPaciente },
+    });
+
+    //Obtener la historia clinica actual
+    const historiaClinicaActual = await HistoriaClinicaActual.findOne({
+      where: { id: parametros.idHistoriaClinicaActual },
+    });
+
+    //Crear la receta
+    const receta = await Receta.create(
+      {
+        idDocPac: docpac.id,
+        idHistoriaClinicaActual: historiaClinicaActual.id,
+        Fecha_inicio: parametros.Fecha_inicio,
+        Fecha_fin: parametros.Fecha_fin,
+        Indicaciones: parametros.Indicaciones,
+      }
+      , { transaction: t });
+
+    //Guardar todos los medicamentos
+    const medicamentos = parametros.Medicamentos.map((medicamento) => {
+      medicamento.idReceta = receta.id;
+      return medicamento;
+    });
+
+    await Medicamento.bulkCreate(medicamentos, { transaction: t });
+
+    await t.commit();
+    res.status(200).json(receta);
+
+  } catch (error) {
+    console.log(error);
+    await t.rollback();
+    res.status(500).json({ message: error });
+  }
 });
 
 export default router;
