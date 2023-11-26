@@ -42,6 +42,7 @@ Domicilio.init(
     Telefono:{
       type: DataTypes.STRING,
       allowNull: false,
+      unique: true,
     }
   },
   {
@@ -186,6 +187,10 @@ Doctor.init(
     },
     Especialidad: {
       type: DataTypes.STRING,
+      allowNull: false,
+    },
+    Genero: {
+      type: DataTypes.STRING(10),
       allowNull: false,
     },
     idDomicilio:{

@@ -1,4 +1,11 @@
 import express from "express";
+import moment from "moment/moment.js";
+import pkg from '@pdftron/pdfnet-node';
+const { PDFNet } = pkg;
+import path from "path";
+import * as url from 'url';
+const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
+import fs from "fs";
 const router = express.Router();
 import sequelize from "../db.js";
 import { Op } from "sequelize";
@@ -1728,7 +1735,7 @@ router.post("/addReceta", authRequired, async (req, res) => {
     await Medicamento.bulkCreate(medicamentos, { transaction: t });
 
     await t.commit();
-    res.status(200).json(receta);
+    res.status(200).json({ recipe: receta.id });
 
   } catch (error) {
     console.log(error);
@@ -1736,5 +1743,179 @@ router.post("/addReceta", authRequired, async (req, res) => {
     res.status(500).json({ message: error });
   }
 });
+
+//Handle PDF
+router.get("/generatePDF", async (req, res) => {
+  const inputPath = path.join(__dirname, "../files/FormatoReceta.docx");
+  const outputPath = path.join(__dirname, "../files/FormatoReceta.pdf");
+
+  const convertToPDF = async () => {
+    const pdfdoc = await PDFNet.PDFDoc.create();
+    await pdfdoc.initSecurityHandler();
+    await PDFNet.Convert.toPdf(pdfdoc, inputPath);
+    pdfdoc.save(outputPath, PDFNet.SDFDoc.SaveOptions.e_linearized);
+  }
+
+  PDFNet.runWithCleanup(convertToPDF, process.env.PDF_KEY).then(() => {
+    PDFNet.shutdown();
+    res.download(outputPath);
+  }).catch((err) => {
+    console.log(err);
+    PDFNet.shutdown();
+    res.status(500).json({ message: err });
+  });
+});
+
+router.get("/recipePDF/:idReceta", async (req, res) => {
+  const { idReceta } = req.params;
+  const inputPath = path.join(__dirname, "../files/FormatoReceta.pdf");
+  const outputPath = path.join(__dirname, "../files/Receta.pdf");
+
+  const receta = await Receta.findOne({
+    where: { id: idReceta },
+    include: [
+      {
+        model: DocPac,
+        required: true,
+        include: [
+          {
+            model: Doctor,
+            required: true,
+            include: [
+              {
+                model: User,
+                required: true,
+              },
+            ],
+          },
+          {
+            model: Paciente,
+            required: true,
+            include: [
+              {
+                model: User,
+                required: true,
+              },
+            ],
+            include: [
+              {
+                model: HistorialClinico,
+                required: true,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        model: HistoriaClinicaActual,
+        required: true,
+      },
+      {
+        model: Medicamento,
+        required: true,
+      }
+    ],
+  });
+
+  if (!receta) {
+    return res.status(404).json({ message: "Receta not found" });
+  }
+
+  const clinica = await Clinica.findOne({
+    include: [
+      {
+        model: User,
+        required: true,
+        where: { id: receta.DocPac.Doctor.User.id },
+      },
+      {
+        model: Domicilio,
+        required: true,
+      }
+    ],
+  });
+
+  const nombreDoctor = `${receta.DocPac.Doctor.Nombre} ${receta.DocPac.Doctor.ApellidoP} ${receta.DocPac.Doctor.ApellidoM}`;
+  const nombrePaciente = `${receta.DocPac.Paciente.Nombre} ${receta.DocPac.Paciente.ApellidoP} ${receta.DocPac.Paciente.ApellidoM}`;
+
+  const medicamentos = receta.Medicamentos.map(
+    (medicamento) => {
+      return {
+        Medicamento: medicamento.Nombre,
+        Dosis: medicamento.Dosis,
+        Frecuencia: medicamento.Frecuencia,
+        Administracion: medicamento.Via_administracion,
+      };
+    }
+  );
+
+  const domicilioClinica = `${clinica.Domicilio.Calle} ${clinica.Domicilio.Num_ext} ${clinica.Domicilio.Colonia} ${clinica.Domicilio.Municipio} ${clinica.Domicilio.Estado} ${clinica.Domicilio.CP}`;
+  const edadPaciente = moment().diff(receta.DocPac.Paciente.Fecha_nacimiento, 'years');
+
+  const data = {
+    idReceta: receta.id,
+    nombreClinica: clinica.Nombre,
+    direccionClinica: domicilioClinica,
+    nombreDoctor,
+    especialidad: receta.DocPac.Doctor.Especialidad,
+    cedula: receta.DocPac.Doctor.Cedula,
+    nombrePaciente,
+    edadPaciente: edadPaciente.toString(),
+    sexo: receta.DocPac.Paciente.Genero,
+    idHistorialClinico: receta.DocPac.Paciente.HistorialClinico.id,
+    diagnostico: receta.HistoriaClinicaActual.Motivo_consulta,
+    sintomas: receta.HistoriaClinicaActual.Sintomas,
+    indicaciones: receta.Indicaciones,
+    medicamentos,
+    fecha_inicio: receta.Fecha_inicio,
+    fecha_fin: receta.Fecha_fin,
+  };
+
+  const convertToPDF = async () => {
+    const pdfdoc = await PDFNet.PDFDoc.createFromFilePath(inputPath);
+    await pdfdoc.initSecurityHandler();
+    const replacer = await PDFNet.ContentReplacer.create();
+    const page = await pdfdoc.getPage(1);
+
+    await replacer.addString("idR", data.idReceta.toString());
+    await replacer.addString("NombreClinica", data.nombreClinica);
+    await replacer.addString("DireccionClinica", data.direccionClinica);
+    await replacer.addString("NombreDoctor", data.nombreDoctor);
+    await replacer.addString("Especialidad", data.especialidad);
+    await replacer.addString("Cedula", data.cedula);
+    await replacer.addString("NombrePaciente", data.nombrePaciente);
+    await replacer.addString("idH", data.idHistorialClinico.toString());
+    await replacer.addString("Edad", data.edadPaciente);
+    await replacer.addString("Genero", data.sexo);
+    await replacer.addString("Motivo_consulta", data.diagnostico);
+    await replacer.addString("Sintomas", data.sintomas);
+    await replacer.addString("Indicaciones", data.indicaciones);
+    await replacer.addString("Fecha_inicio", data.fecha_inicio);
+    await replacer.addString("Fecha_fin", data.fecha_fin);
+
+    for (let i = 0; i < data.medicamentos.length; i++) {
+      await replacer.addString(`Medicamento${i}`, data.medicamentos[i].Medicamento);
+      await replacer.addString(`Instrucciones${i}`, `Tomar ${data.medicamentos[i].Dosis} cada ${data.medicamentos[i].Frecuencia} vía ${data.medicamentos[i].Administracion}`);
+    }
+
+    for (let i = data.medicamentos.length; i < 13; i++) {
+      await replacer.addString(`Medicamento${i}`, "");
+      await replacer.addString(`Instrucciones${i}`, "");
+    }
+
+    await replacer.process(page);
+    pdfdoc.save(outputPath, PDFNet.SDFDoc.SaveOptions.e_linearized);
+  }
+
+  PDFNet.runWithCleanup(convertToPDF, process.env.PDF_KEY ).then(() => {
+    res.setHeader('Content-Type', 'application/pdf');
+    res.end(fs.readFileSync(outputPath), 'binary');
+  }).catch((err) => {
+    console.log(err);
+    PDFNet.shutdown();
+    res.status(500).json({ message: err });
+  })
+});
+
 
 export default router;
