@@ -313,6 +313,16 @@ router.post("/addDoctor", authRequired, async (req, res) => {
 
     //Guardar el domicilio del doctor
 
+    //Verificar si el numero de telefono ya esta en uso
+    const telefonoExists = await Domicilio.findOne({
+      where: { Telefono: parametros.Telefono },
+    });
+
+    if (telefonoExists) {
+      await t.rollback();
+      return res.status(400).json({ message: "El numero de telefono ya esta en uso" });
+    }
+
     const domicilioPayload = {
       Calle: parametros.Calle,
       Num_ext: parametros.Num_ext,
@@ -338,6 +348,7 @@ router.post("/addDoctor", authRequired, async (req, res) => {
       CURP: parametros.CURP,
       Cedula: parametros.Cedula,
       Especialidad: parametros.Especialidad,
+      Genero: parametros.Genero,
       idDomicilio: domicilio.id,
       idConfiguraciones: docConfig.id,
     };
@@ -348,6 +359,7 @@ router.post("/addDoctor", authRequired, async (req, res) => {
 
     res.json(doctor);
   } catch (error) {
+    console.log(error);
     await t.rollback();
     res.status(500).json({ message: error });
   }
@@ -795,6 +807,16 @@ router.post("/addPatient/:doctorID", authRequired, async (req, res) => {
     };
 
     const user = await User.create(userPayload, { transaction: t });
+
+    //Verificar si el numero de telefono ya esta en uso
+    const telefonoExists = await Domicilio.findOne({
+      where: { Telefono: domicilioPayload.Telefono },
+    });
+
+    if (telefonoExists) {
+      await t.rollback();
+      return res.status(400).json({ message: "El numero de telefono ya esta en uso" });
+    }
 
     //Guardar el domicilio del paciente
 
@@ -1663,6 +1685,16 @@ router.put("/editClinica", authRequired, async (req, res) => {
     if (!clinica) return res.status(404).send({ message: "Clinica not found" });
 
     await Clinica.update(parametros.clinicaPayload, { where: { id: req.user.idClinica }, transaction: t });
+
+    //Verificar si el numero de telefono ya esta en uso
+    const telefonoExists = await Domicilio.findOne({
+      where: { Telefono: parametros.domicilioPayload.Telefono },
+    });
+
+    if (telefonoExists) {
+      await t.rollback();
+      return res.status(400).json({ message: "El numero de telefono ya esta en uso" });
+    }
 
     if (clinica.idDomicilio) {
       await Domicilio.update(parametros.domicilioPayload, { where: { id: clinica.idDomicilio }, transaction: t });
