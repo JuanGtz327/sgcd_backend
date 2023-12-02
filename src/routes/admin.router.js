@@ -632,10 +632,9 @@ router.put("/editDoctorConfigs/:idDoc", authRequired, async (req, res) => {
     const citasHoras = citas.filter(cita => {
       if (dayjs().tz("America/Mexico_City").isAfter(dayjs(cita.Fecha).tz("America/Mexico_City")))
         return false;
-      const citaDate = dayjs(cita.Fecha).tz("America/Mexico_City");
-      const citaHora = citaDate.format("HH:mm");
+      const citaHora = dayjs(cita.Fecha).format("HH:mm");
       if (!horaEnRangoDayJS(citaHora, configuracionesPayload.Horario.split("-")[0], configuracionesPayload.Horario.split("-")[1])) {
-        errors.push({ citaDate, citaHora, cita, inicio: configuracionesPayload.Horario.split("-")[0], fin: configuracionesPayload.Horario.split("-")[1] })
+        errors.push({ citaHora, cita, inicio: configuracionesPayload.Horario.split("-")[0], fin: configuracionesPayload.Horario.split("-")[1] })
         return true;
       } else {
         return false;
