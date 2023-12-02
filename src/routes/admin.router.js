@@ -13,6 +13,7 @@ import { Op } from "sequelize";
 import bcrypt from "bcryptjs";
 import { authRequired } from "../middlewares/validateToken.js";
 import { horaEnRangoDayJS, tieneDosHorasDeDiferencia } from '../libs/libs.js'
+import { sendSMS,sendSMS24BeforeHours,sendSMS2BeforeHours } from "../libs/sms.js";
 
 import dayjs from "dayjs";
 import "dayjs/locale/es.js";
@@ -1246,6 +1247,63 @@ router.post("/addCita", authRequired, async (req, res) => {
     const cita = await Cita.create(parametros, { transaction: t });
     res.json(cita);
     await t.commit();
+
+    //Buscar la cita para obtener el paciente
+    const citaPaciente = await Cita.findOne({
+      where: { id: cita.id },
+      include: [{
+        model: DocPac,
+        required: true,
+        include: [
+          {
+            model: Paciente, required: true,
+            include: [
+              {
+                model: User,
+                required: true,
+                where: { idClinica: req.user.idClinica },
+              },
+              {
+                model: Domicilio,
+                required: true,
+
+              }
+            ],
+          },
+          {
+            model: Doctor,
+            required: true,
+            include: [
+              {
+                model: User,
+                required: true,
+                where: { idClinica: req.user.idClinica },
+                include: [
+                  {
+                    model: Clinica,
+                    required: true,
+                  }
+                ]
+              },
+              {
+                model: Domicilio,
+                required: true,
+              }
+            ],
+          },
+        ]
+      }]
+    });
+
+    //Enviar mensaje al doctor
+    sendSMS(citaPaciente.DocPac.Doctor.Domicilio.Telefono, `Tienes una cita el dia ${dayjs(citaPaciente.Fecha).tz("America/Mexico_City").format("DD/MM/YYYY")} a las ${dayjs(citaPaciente.Fecha).tz("America/Mexico_City").format("HH:mm")} con el paciente ${citaPaciente.DocPac.Paciente.Nombre} ${citaPaciente.DocPac.Paciente.ApellidoP} en la clinica ${citaPaciente.DocPac.Doctor.User.Clinica.Nombre}`);
+
+    //Enviar mensaje al paciente
+    sendSMS(citaPaciente.DocPac.Paciente.Domicilio.Telefono, `Tienes una cita el dia ${dayjs(citaPaciente.Fecha).tz("America/Mexico_City").format("DD/MM/YYYY")} a las ${dayjs(citaPaciente.Fecha).tz("America/Mexico_City").format("HH:mm")} con el doctor ${citaPaciente.DocPac.Doctor.Nombre} ${citaPaciente.DocPac.Doctor.ApellidoP} en la clinica ${citaPaciente.DocPac.Doctor.User.Clinica.Nombre}`);
+
+    sendSMS2BeforeHours(citaPaciente)
+    sendSMS24BeforeHours(citaPaciente)
+
   } catch (error) {
     console.log(error);
     await t.rollback();
