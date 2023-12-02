@@ -22,7 +22,6 @@ import timezone from "dayjs/plugin/timezone.js";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.locale("es");
-const currentDate = dayjs().tz("America/Mexico_City");
 
 import User, {
   Clinica,
@@ -50,6 +49,27 @@ router.get("/refresh-db", async (req, res) => {
   } catch (error) {
     res.send(JSON.stringify(error));
   }
+});
+
+router.get("/metricas", async (req, res) => {
+  res.json({
+    ServerTime: dayjs().tz("America/Mexico_City").format("DD/MM/YYYY HH:mm:ss"),
+    Metricas: {
+      doctorsTotal: await Doctor.count(),
+      patientsTotal: await Paciente.count(),
+      appointmentsTotal: await Cita.count(),
+      clinicsTotal: await Clinica.count(),
+    },
+    DB: {
+      statusDB: sequelize.options.database,
+      statusDBHost: sequelize.options.host,
+      statusDBPort: sequelize.options.port,
+      statusDBDialect: sequelize.options.dialect,
+      statusDBDialectOptions: sequelize.options.dialectOptions,
+      statusDBTimezone: sequelize.options.timezone,
+      statusDBTime: await sequelize.query("SELECT NOW()"),
+    }
+  });
 });
 
 router.get("/pruebahistorial", async (req, res) => {
@@ -594,7 +614,7 @@ router.put("/editDoctorConfigs/:idDoc", authRequired, async (req, res) => {
     ];
 
     const citasAgendadas = citas.filter(cita => {
-      if (currentDate.isAfter(dayjs(cita.Fecha).tz("America/Mexico_City")))
+      if (dayjs().tz("America/Mexico_City").isAfter(dayjs(cita.Fecha).tz("America/Mexico_City")))
         return false;
       const citaDate = dayjs(cita.Fecha).tz("America/Mexico_City");
       return !configuracionesPayload.Dias_laborables.includes(days[citaDate.day()]);
@@ -608,7 +628,7 @@ router.put("/editDoctorConfigs/:idDoc", authRequired, async (req, res) => {
     //Checar que no haya citas agendadas en horas que se quieren eliminar
 
     const citasHoras = citas.filter(cita => {
-      if (currentDate.isAfter(dayjs(cita.Fecha).tz("America/Mexico_City")))
+      if (dayjs().tz("America/Mexico_City").isAfter(dayjs(cita.Fecha).tz("America/Mexico_City")))
         return false;
       const citaDate = dayjs(cita.Fecha).tz("America/Mexico_City");
       const citaHora = citaDate.format("HH:mm");
@@ -1939,7 +1959,7 @@ router.get("/recipePDF/:idReceta", async (req, res) => {
     pdfdoc.save(outputPath, PDFNet.SDFDoc.SaveOptions.e_linearized);
   }
 
-  PDFNet.runWithCleanup(convertToPDF, process.env.PDF_KEY ).then(() => {
+  PDFNet.runWithCleanup(convertToPDF, process.env.PDF_KEY).then(() => {
     res.setHeader('Content-Type', 'application/pdf');
     res.end(fs.readFileSync(outputPath), 'binary');
   }).catch((err) => {
