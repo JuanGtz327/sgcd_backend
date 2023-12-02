@@ -12,7 +12,7 @@ import { Op } from "sequelize";
 
 import bcrypt from "bcryptjs";
 import { authRequired } from "../middlewares/validateToken.js";
-import { horaEnRangoDayJS , tieneDosHorasDeDiferencia } from '../libs/libs.js'
+import { horaEnRangoDayJS, tieneDosHorasDeDiferencia } from '../libs/libs.js'
 
 import dayjs from "dayjs";
 import "dayjs/locale/es.js";
@@ -627,17 +627,30 @@ router.put("/editDoctorConfigs/:idDoc", authRequired, async (req, res) => {
 
     //Checar que no haya citas agendadas en horas que se quieren eliminar
 
+    const errors = []
+
     const citasHoras = citas.filter(cita => {
       if (dayjs().tz("America/Mexico_City").isAfter(dayjs(cita.Fecha).tz("America/Mexico_City")))
         return false;
       const citaDate = dayjs(cita.Fecha).tz("America/Mexico_City");
       const citaHora = citaDate.format("HH:mm");
-      return !horaEnRangoDayJS(citaHora, configuracionesPayload.Horario.split("-")[0], configuracionesPayload.Horario.split("-")[1]);
+      if (!horaEnRangoDayJS(citaHora, configuracionesPayload.Horario.split("-")[0], configuracionesPayload.Horario.split("-")[1])) {
+        errors.push({ citaDate, citaHora, cita, inicio: configuracionesPayload.Horario.split("-")[0], fin: configuracionesPayload.Horario.split("-")[1] })
+        return true;
+      } else {
+        return false;
+      }
     });
 
     if (citasHoras.length > 0) {
       await t.rollback();
-      return res.status(400).json({ message: "No se puede actualizar el horario por que hay una cita fuera de rango", citasHoras });
+      return res.status(400).json({
+        message: "No se puede actualizar el horario por que hay una cita fuera de rango",
+        citasHoras,
+        inicio: configuracionesPayload.Horario.split("-")[0],
+        fin: configuracionesPayload.Horario.split("-")[1],
+        citas
+      });
     }
 
     //Verificar que el horario tenga una duracion de 2 horas
