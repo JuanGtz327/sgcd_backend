@@ -12,7 +12,7 @@ import { Op } from "sequelize";
 
 import bcrypt from "bcryptjs";
 import { authRequired } from "../middlewares/validateToken.js";
-import { horaEnRango, tieneDosHorasDeDiferencia } from '../libs/libs.js'
+import { horaEnRangoDayJS , tieneDosHorasDeDiferencia } from '../libs/libs.js'
 
 import dayjs from "dayjs";
 import "dayjs/locale/es.js";
@@ -632,7 +632,7 @@ router.put("/editDoctorConfigs/:idDoc", authRequired, async (req, res) => {
         return false;
       const citaDate = dayjs(cita.Fecha).tz("America/Mexico_City");
       const citaHora = citaDate.format("HH:mm");
-      return !horaEnRango(citaHora, configuracionesPayload.Horario.split("-")[0], configuracionesPayload.Horario.split("-")[1]);
+      return !horaEnRangoDayJS(citaHora, configuracionesPayload.Horario.split("-")[0], configuracionesPayload.Horario.split("-")[1]);
     });
 
     if (citasHoras.length > 0) {

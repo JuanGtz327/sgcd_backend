@@ -1,30 +1,32 @@
-export function horaEnRango(hora, rangoInicio, rangoFin) {
-  const horaDate = new Date();
-  const [horaH, minutoH] = hora.split(':');
-  horaDate.setHours(parseInt(horaH, 10), parseInt(minutoH, 10), 0);
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
 
-  const rangoInicioDate = new Date();
-  const [horaInicio, minutoInicio] = rangoInicio.split(':');
-  rangoInicioDate.setHours(parseInt(horaInicio, 10), parseInt(minutoInicio, 10), 0);
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.locale("es");
 
-  const rangoFinDate = new Date();
-  const [horaFin, minutoFin] = rangoFin.split(':');
-  rangoFinDate.setHours(parseInt(horaFin, 10), parseInt(minutoFin, 10), 0);
+export function horaEnRangoDayJS(hora, rangoInicio, rangoFin) {
+  const horaDate = dayjs().set('hour', hora.split(':')[0]).set('minute', hora.split(':')[1]).set('second', 0);
+  const rangoInicioDate = dayjs().set('hour', rangoInicio.split(':')[0]).set('minute', rangoInicio.split(':')[1]).set('second', 0);
+  const rangoFinDate = dayjs().set('hour', rangoFin.split(':')[0]).set('minute', rangoFin.split(':')[1]).set('second', 0);
 
-  return horaDate >= rangoInicioDate && horaDate <= rangoFinDate;
+  if(horaDate.isSame(rangoInicioDate) || horaDate.isAfter(rangoInicioDate)){
+    if(horaDate.isSame(rangoFinDate) || horaDate.isBefore(rangoFinDate)){
+      return true;
+    }
+  }
+
+  return false;
 }
 
-export function tieneDosHorasDeDiferencia(rangoInicio, rangoFin) {
-  const rangoInicioDate = new Date();
-  const [horaInicio, minutoInicio] = rangoInicio.split(':');
-  rangoInicioDate.setHours(parseInt(horaInicio, 10), parseInt(minutoInicio, 10), 0);
+export function tieneDosHorasDeDiferencia(hora1, hora2) {
+  const formato = 'HH:mm';
 
-  const rangoFinDate = new Date();
-  const [horaFin, minutoFin] = rangoFin.split(':');
-  rangoFinDate.setHours(parseInt(horaFin, 10), parseInt(minutoFin, 10), 0);
+  const fecha1 = dayjs(`2023-12-01 ${hora1}`, formato);
+  const fecha2 = dayjs(`2023-12-01 ${hora2}`, formato);
 
-  const dosHorasEnMs = 2 * 60 * 60 * 1000; // 2 horas en milisegundos
-  const diferencia = rangoFinDate - rangoInicioDate;
+  const difEnHoras = fecha2.diff(fecha1, 'hour');
 
-  return diferencia >= dosHorasEnMs;
+  return Math.abs(difEnHoras) >= 2;
 }
