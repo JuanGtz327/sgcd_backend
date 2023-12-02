@@ -649,7 +649,8 @@ router.put("/editDoctorConfigs/:idDoc", authRequired, async (req, res) => {
         citasHoras,
         inicio: configuracionesPayload.Horario.split("-")[0],
         fin: configuracionesPayload.Horario.split("-")[1],
-        citas
+        citas,
+        errors
       });
     }
 
