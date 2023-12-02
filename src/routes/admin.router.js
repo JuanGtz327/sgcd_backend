@@ -642,7 +642,7 @@ router.put("/editDoctorConfigs/:idDoc", authRequired, async (req, res) => {
       }
     });
 
-    if (citasHoras.length > 0) {
+    if (citasHoras.length > 0 && errors.length > 0) {
       await t.rollback();
       return res.status(400).json({
         message: "No se puede actualizar el horario por que hay una cita fuera de rango",
