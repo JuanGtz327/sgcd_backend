@@ -11,8 +11,6 @@ export function horaEnRangoDayJS(hora, rangoInicio, rangoFin) {
   const rangoInicioDate = dayjs().set('hour', rangoInicio.split(':')[0]).set('minute', rangoInicio.split(':')[1]).set('second', 0);
   const rangoFinDate = dayjs().set('hour', rangoFin.split(':')[0]).set('minute', rangoFin.split(':')[1]).set('second', 0);
 
-  console.log(horaDate.format() , rangoInicioDate.format(), rangoFinDate.format());
-
   if(horaDate.isSame(rangoInicioDate) || horaDate.isAfter(rangoInicioDate)){
     if(horaDate.isSame(rangoFinDate) || horaDate.isBefore(rangoFinDate)){
       return true;

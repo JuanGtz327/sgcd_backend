@@ -1296,10 +1296,10 @@ router.post("/addCita", authRequired, async (req, res) => {
     });
 
     //Enviar mensaje al doctor
-    sendSMS(citaPaciente.DocPac.Doctor.Domicilio.Telefono, `Tienes una cita el dia ${dayjs(citaPaciente.Fecha).tz("America/Mexico_City").format("DD/MM/YYYY")} a las ${dayjs(citaPaciente.Fecha).tz("America/Mexico_City").format("HH:mm")} con el paciente ${citaPaciente.DocPac.Paciente.Nombre} ${citaPaciente.DocPac.Paciente.ApellidoP} en la clinica ${citaPaciente.DocPac.Doctor.User.Clinica.Nombre}`);
+    sendSMS(citaPaciente.DocPac.Doctor.Domicilio.Telefono, `Se le agendo una cita el dia ${dayjs(citaPaciente.Fecha).tz("America/Mexico_City").format("DD/MM/YYYY")} a las ${dayjs(citaPaciente.Fecha).format("HH:mm")} con el paciente ${citaPaciente.DocPac.Paciente.Nombre} ${citaPaciente.DocPac.Paciente.ApellidoP} en la clinica ${citaPaciente.DocPac.Doctor.User.Clinica.Nombre}`);
 
     //Enviar mensaje al paciente
-    sendSMS(citaPaciente.DocPac.Paciente.Domicilio.Telefono, `Tienes una cita el dia ${dayjs(citaPaciente.Fecha).tz("America/Mexico_City").format("DD/MM/YYYY")} a las ${dayjs(citaPaciente.Fecha).tz("America/Mexico_City").format("HH:mm")} con el doctor ${citaPaciente.DocPac.Doctor.Nombre} ${citaPaciente.DocPac.Doctor.ApellidoP} en la clinica ${citaPaciente.DocPac.Doctor.User.Clinica.Nombre}`);
+    sendSMS(citaPaciente.DocPac.Paciente.Domicilio.Telefono, `Se ha agendado una cita para el dia ${dayjs(citaPaciente.Fecha).tz("America/Mexico_City").format("DD/MM/YYYY")} a las ${dayjs(citaPaciente.Fecha).format("HH:mm")} con el doctor ${citaPaciente.DocPac.Doctor.Nombre} ${citaPaciente.DocPac.Doctor.ApellidoP} en la clinica ${citaPaciente.DocPac.Doctor.User.Clinica.Nombre}`);
 
     sendSMS2BeforeHours(citaPaciente)
     sendSMS24BeforeHours(citaPaciente)
