@@ -27,14 +27,15 @@ export const sendSMS = async (to = '5563227495', body = 'Your appointment is com
 
 export const sendSMS2BeforeHours = (citaPaciente) => {
   let fechaCita;
-  if (process.env.ENVIROMENT !== 'dev') {
+  if (process.env.ENVIROMENT === 'dev') {
     fechaCita = dayjs(citaPaciente.Fecha, 'YYYY-MM-DD HH:mm:ss');
-    
-  }else {
+
+  } else {
     const temp = dayjs(citaPaciente.Fecha, 'YYYY-MM-DD HH:mm:ss');
     fechaCita = temp.add(6, 'hour');
   }
 
+  console.log(`Agregando cron ${fechaCita.subtract(2, 'hour').format('m H D M d')} para fecha ${fechaCita.format('YYYY-MM-DD HH:mm:ss')}`);
   cron.schedule(
     fechaCita.subtract(2, 'hour').format('m H D M d'),
     () => {
@@ -48,8 +49,15 @@ export const sendSMS2BeforeHours = (citaPaciente) => {
 }
 
 export const sendSMS24BeforeHours = (citaPaciente) => {
-  const fechaCita = dayjs(citaPaciente.Fecha, 'YYYY-MM-DD HH:mm:ss');
+  let fechaCita;
+  if (process.env.ENVIROMENT === 'dev') {
+    fechaCita = dayjs(citaPaciente.Fecha, 'YYYY-MM-DD HH:mm:ss');
 
+  } else {
+    const temp = dayjs(citaPaciente.Fecha, 'YYYY-MM-DD HH:mm:ss');
+    fechaCita = temp.add(6, 'hour');
+  }
+  console.log(`Agregando cron ${fechaCita.subtract(24, 'hour').format('m H D M d')} para fecha ${fechaCita.format('YYYY-MM-DD HH:mm:ss')}`);
   cron.schedule(
     fechaCita.subtract(24, 'hour').format('m H D M d'),
     () => {
