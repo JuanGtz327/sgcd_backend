@@ -9,11 +9,12 @@ import fs from "fs";
 const router = express.Router();
 import sequelize from "../db.js";
 import { Op } from "sequelize";
+import { decrypt, encrypt } from "../libs/cipher.js";
 
 import bcrypt from "bcryptjs";
 import { authRequired } from "../middlewares/validateToken.js";
 import { horaEnRangoDayJS, tieneDosHorasDeDiferencia } from '../libs/libs.js'
-import { sendSMS,sendSMS24BeforeHours,sendSMS2BeforeHours } from "../libs/sms.js";
+import { sendSMS, sendSMS24BeforeHours, sendSMS2BeforeHours } from "../libs/sms.js";
 
 import dayjs from "dayjs";
 import "dayjs/locale/es.js";
@@ -940,6 +941,7 @@ router.post("/addPatient/:doctorID", authRequired, async (req, res) => {
     await t.commit();
     res.json(historial_clinico);
   } catch (error) {
+    console.log(error);
     await t.rollback();
     res.status(500).json({ message: error });
   }
@@ -1152,6 +1154,26 @@ router.get("/getPatient/:idPat", authRequired, async (req, res) => {
       },
     ],
   });
+
+  //Desencriptar los paramentros de la historia medica
+  const historiaMedica = patient.HistorialClinico.HistoriaMedica;
+  historiaMedica.Enfermedades_hereditarias = decrypt(historiaMedica.Enfermedades_hereditarias);
+  historiaMedica.Enfermedades_previas = decrypt(historiaMedica.Enfermedades_previas);
+  historiaMedica.Cirugias = decrypt(historiaMedica.Cirugias);
+  historiaMedica.Alergias = decrypt(historiaMedica.Alergias);
+  historiaMedica.Traumatismos = decrypt(historiaMedica.Traumatismos);
+  historiaMedica.Habitos_salud = decrypt(historiaMedica.Habitos_salud);
+
+  //Desencriptar los paramentros de la historia clinica actual
+  const historiaClinicaActual = patient.HistorialClinico.HistoriaClinicaActuals;
+  historiaClinicaActual.map(historia => {
+    historia.Sintomas = decrypt(historia.Sintomas);
+    historia.Motivo_consulta = decrypt(historia.Motivo_consulta);
+    historia.Fecha_inicio_sintomas = decrypt(historia.Fecha_inicio_sintomas);
+    historia.Plan_tratamiento = decrypt(historia.Plan_tratamiento);
+    return historia;
+  });
+
   res.status(200).json(patient);
 });
 
@@ -1693,6 +1715,14 @@ router.put("/editHistoriaMedica/:idHM", authRequired, async (req, res) => {
   if (!historiaMedica)
     return res.status(404).send({ message: "Historia medica not found" });
 
+  // Encriptar los parametros de la historia medica
+  parametros.Enfermedades_hereditarias = encrypt(parametros.Enfermedades_hereditarias);
+  parametros.Enfermedades_previas = encrypt(parametros.Enfermedades_previas);
+  parametros.Cirugias = encrypt(parametros.Cirugias);
+  parametros.Alergias = encrypt(parametros.Alergias);
+  parametros.Traumatismos = encrypt(parametros.Traumatismos);
+  parametros.Habitos_salud = encrypt(parametros.Habitos_salud);
+
   const updatedHistoriaMedica = await HistoriaMedica.update(parametros, {
     where: { id: idHM },
   });
@@ -1721,6 +1751,12 @@ router.put("/editExamenFisico/:idEF", authRequired, async (req, res) => {
 router.post("/addHistoriaClinicaActual", authRequired, async (req, res) => {
   const { ...parametros } = req.body;
 
+  //Encriptar los parametros de la historia clinica actual
+  parametros.Motivo_consulta = encrypt(parametros.Motivo_consulta);
+  parametros.Sintomas = encrypt(parametros.Sintomas);
+  parametros.Fecha_inicio_sintomas = encrypt(parametros.Fecha_inicio_sintomas);
+  parametros.Plan_tratamiento = encrypt(parametros.Plan_tratamiento);
+
   const historiaClinicaActual = await HistoriaClinicaActual.create(
     parametros
   );
@@ -1734,6 +1770,12 @@ router.get("/getHistoriaClinicaActual/:idHC", authRequired, async (req, res) => 
   const historiaClinicaActual = await HistoriaClinicaActual.findOne({
     where: { id: idHC },
   });
+
+  // Desencriptar los paramentros de la historia clinica actual
+  historiaClinicaActual.Sintomas = decrypt(historiaClinicaActual.Sintomas);
+  historiaClinicaActual.Motivo_consulta = decrypt(historiaClinicaActual.Motivo_consulta);
+  historiaClinicaActual.Fecha_inicio_sintomas = decrypt(historiaClinicaActual.Fecha_inicio_sintomas);
+  historiaClinicaActual.Plan_tratamiento = decrypt(historiaClinicaActual.Plan_tratamiento);
 
   res.status(200).json(historiaClinicaActual);
 });

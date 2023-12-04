@@ -1,7 +1,8 @@
 import { DataTypes, Model } from "sequelize";
 import sequelize from "../db.js";
+import { encrypt } from "../libs/cipher.js";
 
-export class Domicilio extends Model {}
+export class Domicilio extends Model { }
 
 Domicilio.init(
   {
@@ -39,7 +40,7 @@ Domicilio.init(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    Telefono:{
+    Telefono: {
       type: DataTypes.STRING,
       allowNull: false,
       unique: true,
@@ -52,7 +53,7 @@ Domicilio.init(
   }
 );
 
-export class Clinica extends Model {}
+export class Clinica extends Model { }
 
 Clinica.init(
   {
@@ -83,7 +84,7 @@ Clinica.init(
   }
 );
 
-class User extends Model {}
+class User extends Model { }
 
 User.init(
   {
@@ -124,7 +125,7 @@ User.init(
   }
 );
 
-export class Especialidad extends Model {}
+export class Especialidad extends Model { }
 
 Especialidad.init(
   {
@@ -147,7 +148,7 @@ Especialidad.init(
   }
 );
 
-export class Doctor extends Model {}
+export class Doctor extends Model { }
 
 Doctor.init(
   {
@@ -161,7 +162,7 @@ Doctor.init(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    idConfiguraciones:{
+    idConfiguraciones: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
@@ -193,7 +194,7 @@ Doctor.init(
       type: DataTypes.STRING(10),
       allowNull: false,
     },
-    idDomicilio:{
+    idDomicilio: {
       type: DataTypes.INTEGER,
       allowNull: false,
     }
@@ -205,7 +206,7 @@ Doctor.init(
   }
 );
 
-export class Paciente extends Model {}
+export class Paciente extends Model { }
 
 Paciente.init(
   {
@@ -255,7 +256,7 @@ Paciente.init(
   }
 );
 
-export class DocPac extends Model {}
+export class DocPac extends Model { }
 
 DocPac.init(
   {
@@ -281,7 +282,7 @@ DocPac.init(
   }
 );
 
-export class HistoriaMedica extends Model {}
+export class HistoriaMedica extends Model { }
 
 HistoriaMedica.init(
   {
@@ -324,10 +325,20 @@ HistoriaMedica.init(
     tableName: "historia_medica",
     sequelize,
     modelName: "HistoriaMedica",
+    hooks: {
+      beforeCreate: (historia_medica, options) => {
+        historia_medica.Enfermedades_hereditarias = encrypt(historia_medica.Enfermedades_hereditarias);
+        historia_medica.Enfermedades_previas = encrypt(historia_medica.Enfermedades_previas);
+        historia_medica.Cirugias = encrypt(historia_medica.Cirugias);
+        historia_medica.Alergias = encrypt(historia_medica.Alergias);
+        historia_medica.Traumatismos = encrypt(historia_medica.Traumatismos);
+        historia_medica.Habitos_salud = encrypt(historia_medica.Habitos_salud);
+      }
+    }
   }
 );
 
-export class ExamenFisico extends Model {}
+export class ExamenFisico extends Model { }
 
 ExamenFisico.init(
   {
@@ -337,11 +348,11 @@ ExamenFisico.init(
       autoIncrement: true,
       allowNull: false,
     },
-    Peso:{
+    Peso: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
-    Estatura:{
+    Estatura: {
       type: DataTypes.DOUBLE,
       allowNull: false,
     },
@@ -377,7 +388,7 @@ ExamenFisico.init(
   }
 );
 
-export class HistorialClinico extends Model {}
+export class HistorialClinico extends Model { }
 
 HistorialClinico.init(
   {
@@ -407,7 +418,7 @@ HistorialClinico.init(
   }
 );
 
-export class HistoriaClinicaActual extends Model {}
+export class HistoriaClinicaActual extends Model { }
 
 HistoriaClinicaActual.init(
   {
@@ -442,11 +453,19 @@ HistoriaClinicaActual.init(
     tableName: "historia_clinica_actual",
     sequelize,
     modelName: "HistoriaClinicaActual",
+    hooks: {
+      beforeCreate: (historia_clinica_actual, options) => {
+        historia_clinica_actual.Motivo_consulta = encrypt(historia_clinica_actual.Motivo_consulta);
+        historia_clinica_actual.Sintomas = encrypt(historia_clinica_actual.Sintomas);
+        historia_clinica_actual.Fecha_inicio_sintomas = encrypt(historia_clinica_actual.Fecha_inicio_sintomas);
+        historia_clinica_actual.Plan_tratamiento = encrypt(historia_clinica_actual.Plan_tratamiento);
+      }
+    }
   }
 );
 
 
-export class Nota extends Model {}
+export class Nota extends Model { }
 
 Nota.init(
   {
@@ -476,7 +495,7 @@ Nota.init(
   }
 );
 
-export class Cita extends Model {}
+export class Cita extends Model { }
 
 Cita.init(
   {
@@ -515,7 +534,7 @@ Cita.init(
   }
 );
 
-export class CancelacionCita extends Model {}
+export class CancelacionCita extends Model { }
 
 CancelacionCita.init(
   {
@@ -546,7 +565,7 @@ CancelacionCita.init(
   }
 );
 
-export class Receta extends Model {}
+export class Receta extends Model { }
 
 Receta.init(
   {
@@ -584,7 +603,7 @@ Receta.init(
   }
 );
 
-export class Medicamento extends Model {}
+export class Medicamento extends Model { }
 
 Medicamento.init(
   {
@@ -622,7 +641,7 @@ Medicamento.init(
   }
 );
 
-export class Configuraciones extends Model {}
+export class Configuraciones extends Model { }
 
 Configuraciones.init(
   {
