@@ -2036,6 +2036,10 @@ router.get("/recipePDF/:idReceta", async (req, res) => {
     fecha_fin: receta.Fecha_fin,
   };
 
+  //Desencriptar el diagnostico y los sintomas
+  data.diagnostico = decrypt(data.diagnostico);
+  data.sintomas = decrypt(data.sintomas);
+
   const convertToPDF = async () => {
     const pdfdoc = await PDFNet.PDFDoc.createFromFilePath(inputPath);
     await pdfdoc.initSecurityHandler();
