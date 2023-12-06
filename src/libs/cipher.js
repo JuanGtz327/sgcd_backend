@@ -15,15 +15,19 @@ export function encrypt(text) {
 }
 
 export function decrypt(encryptedText) {
-  const key = crypto.scryptSync(SECRET_KEY, 'salt', 32);
-  const encryptedArray = encryptedText.split(':'); // Separa el IV del texto cifrado
-  const iv = Buffer.from(encryptedArray[0], 'hex');
-  const textToDecrypt = encryptedArray[1];
+  try {
+    const key = crypto.scryptSync(SECRET_KEY, 'salt', 32);
+    const encryptedArray = encryptedText.split(':'); // Separa el IV del texto cifrado
+    const iv = Buffer.from(encryptedArray[0], 'hex');
+    const textToDecrypt = encryptedArray[1];
 
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-  let decrypted = decipher.update(textToDecrypt, 'hex', 'utf8');
-  decrypted += decipher.final('utf8');
-  return decrypted;
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    let decrypted = decipher.update(textToDecrypt, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  } catch (error) {
+    return 'Error al obtener la informacion, la firma no coincide';
+  }
 }
 
 /*
@@ -32,6 +36,6 @@ let encryptedText = encrypt(text);
 
 console.log('Texto original: ' + text);
 console.log('Texto cifrado: ' + encryptedText);
-let decryptedText = decrypt('774c7e00d994b69db8684d08a47c0b02:1ad2115b9a40f17c6d31eeca22f6d20d');
+let decryptedText = decrypt('df02adf4a6e2c36e3752a0bd40753ece:86352ec53a7b747e506839f45bb85f99');
 console.log('Texto descifrado: ' + decryptedText);
 */

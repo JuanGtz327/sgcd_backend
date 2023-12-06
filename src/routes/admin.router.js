@@ -1751,12 +1751,6 @@ router.put("/editExamenFisico/:idEF", authRequired, async (req, res) => {
 router.post("/addHistoriaClinicaActual", authRequired, async (req, res) => {
   const { ...parametros } = req.body;
 
-  //Encriptar los parametros de la historia clinica actual
-  parametros.Motivo_consulta = encrypt(parametros.Motivo_consulta);
-  parametros.Sintomas = encrypt(parametros.Sintomas);
-  parametros.Fecha_inicio_sintomas = encrypt(parametros.Fecha_inicio_sintomas);
-  parametros.Plan_tratamiento = encrypt(parametros.Plan_tratamiento);
-
   const historiaClinicaActual = await HistoriaClinicaActual.create(
     parametros
   );
