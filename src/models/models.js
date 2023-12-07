@@ -357,7 +357,7 @@ ExamenFisico.init(
       allowNull: false,
     },
     Presion_arterial: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.STRING,
       allowNull: false,
     },
     Frecuencia_cardiaca: {
@@ -369,7 +369,7 @@ ExamenFisico.init(
       allowNull: false,
     },
     Temperatura: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DECIMAL(5, 2),
       allowNull: false,
     },
     Grupo_sanguineo: {
