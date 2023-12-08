@@ -1669,7 +1669,7 @@ router.put("/editCita", authRequired, async (req, res) => {
 
     //Si la esta consultando un administrador o un paciente, verificar cual era el id de doctor anterior
     if (req.user.is_admin || !req.user.is_doctor) {
-      const citaAdminPac = await Cita.findOne({ where: { id } });
+      const citaAdminPac = await Cita.findOne({ where: { id }, include: [{ model: DocPac, required: true }] });
       if (!citaAdminPac) return res.status(404).json({ message: "Cita not found" });
       citaAgendada = await Cita.findOne({
         where: { Fecha, Estado: true },
