@@ -1664,7 +1664,23 @@ router.put("/editCita", authRequired, async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-    const citaAgendada = await Cita.findOne({ where: { Fecha, Estado: true }, include: [{ model: DocPac, where: { idDoctor: req.user.idDoctor }, include: [{ model: Paciente, required: true }] }] });
+
+    let citaAgendada;
+
+    //Si la esta consultando un administrador o un paciente, verificar cual era el id de doctor anterior
+    if (req.user.is_admin || !req.user.is_doctor) {
+      const citaAdminPac = await Cita.findOne({ where: { id } });
+      if (!citaAdminPac) return res.status(404).json({ message: "Cita not found" });
+      citaAgendada = await Cita.findOne({
+        where: { Fecha, Estado: true },
+        include: [{
+          model: DocPac, where: { idDoctor: citaAdminPac.DocPac.idDoctor },
+          include: [{ model: Paciente, required: true }]
+        }]
+      });
+    } else {
+      citaAgendada = await Cita.findOne({ where: { Fecha, Estado: true }, include: [{ model: DocPac, where: { idDoctor: req.user.idDoctor }, include: [{ model: Paciente, required: true }] }] });
+    }
 
     if (citaAgendada) {
       return res.status(400).json({ message: `Ya tiene agendada una cita con ${citaAgendada.DocPac.Paciente.Nombre} ${citaAgendada.DocPac.Paciente.ApellidoP}` });
