@@ -1688,6 +1688,7 @@ router.put("/editCita", authRequired, async (req, res) => {
     res.status(200).json(cita);
   } catch (error) {
     await t.rollback();
+    console.log(error);
     res.status(500).json({ message: error });
   }
 });
