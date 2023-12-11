@@ -1603,25 +1603,15 @@ router.post("/cancelCita", authRequired, async (req, res) => {
 
     if (!cita) return res.status(404).json({ message: "Cita not found" });
 
-    const citaCancelada = await CancelacionCita.findOne({ where: { idCita: cita.id } });
-
-    if (citaCancelada && citaCancelada.Pendiente === true) {
-      await CancelacionCita.update({ Pendiente: false }, { where: { idCita: cita.id }, transaction: t });
-    } else {
-      const cancelacionPayload = {
-        idCita: cita.id,
-        Motivo,
-        Pendiente: (is_admin || is_doctor ? false : true)
-      };
-
-      await CancelacionCita.create(cancelacionPayload, { transaction: t });
-    }
-
-    const payload = {
-      Estado: (is_admin || is_doctor ? false : true)
+    const cancelacionPayload = {
+      idCita: cita.id,
+      Motivo,
+      Pendiente: false
     };
 
-    await Cita.update(payload, { where: { id: cita.id }, transaction: t });
+    await CancelacionCita.create(cancelacionPayload, { transaction: t });
+
+    await Cita.update({ Estado: false }, { where: { id: cita.id }, transaction: t });
     res.status(200).json(cita);
     await t.commit();
   } catch (error) {
