@@ -345,6 +345,26 @@ router.post("/addDoctor", authRequired, async (req, res) => {
       return res.status(400).json({ message: "El numero de telefono ya esta en uso" });
     }
 
+    //Verificar si la curp ya esta en uso
+    const curpExists = await Doctor.findOne({
+      where: { CURP: parametros.CURP },
+    });
+
+    if (curpExists) {
+      await t.rollback();
+      return res.status(400).json({ message: "La CURP ya esta asociada a otro doctor" });
+    }
+
+    //Verificar si la cedula ya esta en uso
+    const cedulaExists = await Doctor.findOne({
+      where: { Cedula: parametros.Cedula },
+    });
+
+    if (cedulaExists) {
+      await t.rollback();
+      return res.status(400).json({ message: "La cedula ya esta asociada a otro doctor" });
+    }
+
     const domicilioPayload = {
       Calle: parametros.Calle,
       Num_ext: parametros.Num_ext,
@@ -497,14 +517,39 @@ router.put("/editDoctor/:idDoc", authRequired, async (req, res) => {
     if (!idDoc)
       return res.status(400).send({ message: "You must provide an Id_Doctor" });
 
-    const doctor = await Doctor.findOne({ where: { id: idDoc } });
+    const doctor = await Doctor.findOne({ where: { id: idDoc }, include: [{ model: Domicilio }] });
     if (!doctor) return res.status(404).send({ message: "Doctor not found" });
+
+    //Actualizar el usuario con el correo del doctor si se paso como parametro
+
+    //Verificar si la curp ya esta en uso
+    //Si es el mismo curp no hay problema
+    if (parametros.CURP && parametros.CURP !== doctor.CURP) {
+      const curpExists = await Doctor.findOne({
+        where: { CURP: parametros.CURP },
+      });
+      if (curpExists) {
+        await t.rollback();
+        return res.status(400).json({ message: "La CURP ya esta asociada a otro doctor" });
+      }
+    }
+
+    //Verificar si el numero de telefono ya esta en uso
+    //Si es el mismo numero no hay problema
+    if (parametros.DomicilioPayload.Telefono && parametros.DomicilioPayload.Telefono !== doctor.Domicilio.Telefono) {
+      const telefonoExists = await Domicilio.findOne({
+        where: { Telefono: parametros.DomicilioPayload.Telefono },
+      });
+      if (telefonoExists) {
+        await t.rollback();
+        return res.status(400).json({ message: "El numero de telefono ya esta en uso" });
+      }
+    }
+
     const updatedDoctor = await Doctor.update(parametros, {
       where: { id: idDoc },
       transaction: t,
     });
-
-    //Actualizar el usuario con el correo del doctor si se paso como parametro
 
     if (parametros.Correo) {
       //Consultar si el email ya esta en uso
@@ -540,6 +585,7 @@ router.put("/editDoctor/:idDoc", authRequired, async (req, res) => {
     await t.commit();
     res.status(200).send(updatedDoctor);
   } catch (error) {
+    console.log(error);
     await t.rollback();
     res.status(500).json({ message: error });
   }
@@ -851,6 +897,16 @@ router.post("/addPatient/:doctorID", authRequired, async (req, res) => {
     if (telefonoExists) {
       await t.rollback();
       return res.status(400).json({ message: "El numero de telefono ya esta en uso" });
+    }
+
+    //Verificar si la curp ya esta en uso
+    const curpExists = await Paciente.findOne({
+      where: { CURP: pacientePayload.CURP },
+    });
+
+    if (curpExists) {
+      await t.rollback();
+      return res.status(400).json({ message: "La CURP ya esta asociada a otro paciente" });
     }
 
     //Guardar el domicilio del paciente

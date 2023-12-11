@@ -181,10 +181,12 @@ Doctor.init(
     CURP: {
       type: DataTypes.STRING,
       allowNull: false,
+      unique: true,
     },
     Cedula: {
       type: DataTypes.STRING,
       allowNull: false,
+      unique: true,
     },
     Especialidad: {
       type: DataTypes.STRING,
@@ -243,6 +245,7 @@ Paciente.init(
     CURP: {
       type: DataTypes.STRING(18),
       allowNull: false,
+      unique: true,
     },
     idDomicilio: {
       type: DataTypes.INTEGER,
