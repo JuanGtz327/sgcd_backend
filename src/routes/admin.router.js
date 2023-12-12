@@ -2023,6 +2023,20 @@ router.get("/recipePDF/:idReceta", async (req, res) => {
               {
                 model: HistorialClinico,
                 required: true,
+                include: [
+                  {
+                    model: HistoriaMedica,
+                    required: true,
+                  },
+                  {
+                    model: ExamenFisico,
+                    required: true,
+                  },
+                  {
+                    model: HistoriaClinicaActual,
+                    required: true,
+                  },
+                ],
               },
             ],
           },
@@ -2074,6 +2088,8 @@ router.get("/recipePDF/:idReceta", async (req, res) => {
   const domicilioClinica = `${clinica.Domicilio.Calle} ${clinica.Domicilio.Num_ext} ${clinica.Domicilio.Colonia} ${clinica.Domicilio.Municipio} ${clinica.Domicilio.Estado} ${clinica.Domicilio.CP}`;
   const edadPaciente = moment().diff(receta.DocPac.Paciente.Fecha_nacimiento, 'years');
 
+  //calcular imc con kg y cm y trunca a 2 decimales
+  const imc = (receta.DocPac.Paciente.HistorialClinico.ExamenFisico.Peso / Math.pow(receta.DocPac.Paciente.HistorialClinico.ExamenFisico.Estatura / 100, 2)).toFixed(2);
   const data = {
     idReceta: receta.id,
     nombreClinica: clinica.Nombre,
@@ -2085,17 +2101,22 @@ router.get("/recipePDF/:idReceta", async (req, res) => {
     edadPaciente: edadPaciente.toString(),
     sexo: receta.DocPac.Paciente.Genero,
     idHistorialClinico: receta.DocPac.Paciente.HistorialClinico.id,
-    diagnostico: receta.HistoriaClinicaActual.Motivo_consulta,
-    sintomas: receta.HistoriaClinicaActual.Sintomas,
+    peso: receta.DocPac.Paciente.HistorialClinico.ExamenFisico.Peso,
+    talla: receta.DocPac.Paciente.HistorialClinico.ExamenFisico.Estatura,
+    presion_arterial: receta.DocPac.Paciente.HistorialClinico.ExamenFisico.Presion_arterial,
+    temperatura: receta.DocPac.Paciente.HistorialClinico.ExamenFisico.Temperatura,
+    frecuencia_cardiaca: receta.DocPac.Paciente.HistorialClinico.ExamenFisico.Frecuencia_cardiaca,
+    frecuencia_respiratoria: receta.DocPac.Paciente.HistorialClinico.ExamenFisico.Frecuencia_respiratoria,
+    imc,
+    alergias: receta.DocPac.Paciente.HistorialClinico.HistoriaMedica.Alergias,
     indicaciones: receta.Indicaciones,
     medicamentos,
     fecha_inicio: receta.Fecha_inicio,
     fecha_fin: receta.Fecha_fin,
   };
 
-  //Desencriptar el diagnostico y los sintomas
-  data.diagnostico = decrypt(data.diagnostico);
-  data.sintomas = decrypt(data.sintomas);
+  //Desencriptar datos (No hay)
+  data.alergias = decrypt(data.alergias);
 
   const convertToPDF = async () => {
     const pdfdoc = await PDFNet.PDFDoc.createFromFilePath(inputPath);
@@ -2113,8 +2134,16 @@ router.get("/recipePDF/:idReceta", async (req, res) => {
     await replacer.addString("idH", data.idHistorialClinico.toString());
     await replacer.addString("Edad", data.edadPaciente);
     await replacer.addString("Genero", data.sexo);
-    await replacer.addString("Motivo_consulta", data.diagnostico);
-    await replacer.addString("Sintomas", data.sintomas);
+
+    await replacer.addString("Peso", data.peso.toString());
+    await replacer.addString("Estatura", data.talla.toString());
+    await replacer.addString("Presion", data.presion_arterial);
+    await replacer.addString("temp", data.temperatura.toString());
+    await replacer.addString("Cardio", data.frecuencia_cardiaca.toString());
+    await replacer.addString("Respira", data.frecuencia_respiratoria.toString());
+    await replacer.addString("masaC", data.imc.toString());
+    await replacer.addString("alergias", data.alergias);
+
     await replacer.addString("Indicaciones", data.indicaciones);
     await replacer.addString("Fecha_inicio", data.fecha_inicio);
     await replacer.addString("Fecha_fin", data.fecha_fin);
