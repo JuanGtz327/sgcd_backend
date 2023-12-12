@@ -415,7 +415,7 @@ router.get("/getDoctors", authRequired, async (req, res) => {
     include: [
       {
         model: User,
-        attributes: ["Correo", "idClinica"],
+        attributes: ["Correo", "idClinica", "is_active"],
         required: true,
         where: { idClinica: req.user.idClinica },
       },
@@ -536,7 +536,7 @@ router.put("/editDoctor/:idDoc", authRequired, async (req, res) => {
 
     //Verificar si el numero de telefono ya esta en uso
     //Si es el mismo numero no hay problema
-    if (parametros.DomicilioPayload.Telefono && parametros.DomicilioPayload.Telefono !== doctor.Domicilio.Telefono) {
+    if (parametros.DomicilioPayload && parametros.DomicilioPayload.Telefono && parametros.DomicilioPayload.Telefono !== doctor.Domicilio.Telefono) {
       const telefonoExists = await Domicilio.findOne({
         where: { Telefono: parametros.DomicilioPayload.Telefono },
       });
@@ -725,9 +725,56 @@ router.put("/editDoctorConfigs/:idDoc", authRequired, async (req, res) => {
 router.delete("/deleteDoctor/:idDoc", authRequired, async (req, res) => {
   const { idDoc } = req.params;
 
-  await User.destroy({ where: { id: idDoc } });
+  //await User.destroy({ where: { id: idDoc } });
+
+  //Verificar que no haya citas agendadas con el doctor
+
+  //Verificar que el paciente no tenga citas agendadas
+  const citas = await Cita.findAll({
+    where: { Estado: true },
+    include: [
+      {
+        model: DocPac,
+        required: true,
+        include: [
+          {
+            model: Doctor,
+            required: true,
+            include: [
+              {
+                model: User,
+                required: true,
+                where: { id: idDoc },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  //Filtrar las citas posteriores a la fecha actual
+  const citasFiltradas = citas.filter(cita => {
+    return dayjs().tz("America/Mexico_City").isBefore(dayjs(cita.Fecha).tz("America/Mexico_City"))
+  });
+
+  if (citasFiltradas.length > 0) {
+    return res.status(400).json({ message: "No se puede desactivar el doctor por que tiene citas agendadas" });
+  }
+
+  //Desactivar el usuario
+  await User.update({ is_active: false }, { where: { id: idDoc } });
 
   res.status(200).json({ message: `Doctor ${idDoc} deleted` });
+});
+
+router.post("/activateDoctor", authRequired, async (req, res) => {
+  const { idDoc } = req.body;
+
+  //Activar el usuario
+  await User.update({ is_active: true }, { where: { id: idDoc } });
+
+  res.status(200).json({ message: `Doctor ${idDoc} activated` });
 });
 
 // Perfil del usuario
@@ -1022,7 +1069,7 @@ router.get("/getPatients", authRequired, async (req, res) => {
             include: [
               {
                 model: User,
-                attributes: ["Correo", "idClinica"],
+                attributes: ["Correo", "idClinica", "is_active"],
                 required: true,
               },
             ],
@@ -1031,7 +1078,7 @@ router.get("/getPatients", authRequired, async (req, res) => {
       },
       {
         model: User,
-        attributes: ["Correo", "idClinica"],
+        attributes: ["Correo", "idClinica", "is_active"],
         required: true,
       },
       {
@@ -1066,7 +1113,7 @@ router.get("/getPatientsByDoctor/:idDoctor", authRequired, async (req, res) => {
             include: [
               {
                 model: User,
-                attributes: ["Correo", "idClinica"],
+                attributes: ["Correo", "idClinica", "is_active"],
                 required: true,
               },
             ],
@@ -1075,7 +1122,7 @@ router.get("/getPatientsByDoctor/:idDoctor", authRequired, async (req, res) => {
       },
       {
         model: User,
-        attributes: ["Correo", "idClinica"],
+        attributes: ["Correo", "idClinica", "is_active"],
         required: true,
       },
       {
@@ -1109,7 +1156,7 @@ router.get("/getPatientsClinic/:idClinica", authRequired, async (req, res) => {
             include: [
               {
                 model: User,
-                attributes: ["Correo", "idClinica"],
+                attributes: ["Correo", "idClinica", "is_active"],
                 required: true,
               },
             ],
@@ -1118,7 +1165,7 @@ router.get("/getPatientsClinic/:idClinica", authRequired, async (req, res) => {
       },
       {
         model: User,
-        attributes: ["Correo", "idClinica"],
+        attributes: ["Correo", "idClinica", "is_active"],
         required: true,
         where: { idClinica },
       },
@@ -1277,9 +1324,53 @@ router.put("/editPatient/:idPat", authRequired, async (req, res) => {
 
 router.delete("/deletePatient/:idPat", authRequired, async (req, res) => {
   const { idPat } = req.params;
-  await User.destroy({ where: { id: idPat } });
+  //await User.destroy({ where: { id: idPat } });
+
+  //Verificar que el paciente no tenga citas agendadas
+  const citas = await Cita.findAll({
+    where: { Estado: true },
+    include: [
+      {
+        model: DocPac,
+        required: true,
+        include: [
+          {
+            model: Paciente,
+            required: true,
+            include: [
+              {
+                model: User,
+                required: true,
+                where: { id: idPat },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  //Filtrar las citas posteriores a la fecha actual
+  const citasFiltradas = citas.filter(cita => {
+    return dayjs().tz("America/Mexico_City").isBefore(dayjs(cita.Fecha).tz("America/Mexico_City"))
+  });
+
+  if (citasFiltradas.length > 0) {
+    return res.status(400).json({ message: "No se puede desactivar el paciente por que tiene citas agendadas" });
+  }
+
+  //Desactivar el usuario
+  await User.update({ is_active: false }, { where: { id: idPat } });
 
   res.status(200).json({ message: `Patient ${idPat} deleted` });
+});
+
+router.post("/activatePatient", authRequired, async (req, res) => {
+  const { idPat } = req.body;
+  //Activar el usuario
+  await User.update({ is_active: true }, { where: { id: idPat } });
+
+  res.status(200).json({ message: `Patient ${idPat} activated` });
 });
 
 router.post("/addDocPac", authRequired, async (req, res) => {

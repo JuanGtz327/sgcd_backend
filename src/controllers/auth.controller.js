@@ -60,6 +60,12 @@ export const login = async (req, res) => {
       return;
     }
 
+    //Verificar que el usuario no este deshabilitado
+    if (!userFound.is_active) {
+      res.status(400).json({ message: "Su cuenta esta deshabilitada contacte al administrador para activarla de nuevo" });
+      return;
+    }
+
     const isMatch = await bcrypt.compare(Password, userFound.Password);
 
     if (!isMatch) {
@@ -80,7 +86,7 @@ export const login = async (req, res) => {
       if (doctorFound) {
         tokenPayload.idDoctor = doctorFound.id;
       }
-    }else{
+    } else {
       const pacienteFound = await Paciente.findOne({ where: { idUser: userFound.id } });
       if (pacienteFound) {
         tokenPayload.idPaciente = pacienteFound.id;
@@ -122,7 +128,7 @@ export const verifyToken = async (req, res) => {
 
     if (!userFound) return res.status(401).json({ message: "No autorizado" });
 
-    let userPayload = {...user}
+    let userPayload = { ...user }
 
     userPayload.token = token;
 

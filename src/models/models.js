@@ -113,6 +113,11 @@ User.init(
       allowNull: false,
       defaultValue: true,
     },
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
     idClinica: {
       type: DataTypes.INTEGER,
       allowNull: false,
