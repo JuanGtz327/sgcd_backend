@@ -42,6 +42,12 @@ import User, {
   Configuraciones,
   Receta,
   Medicamento,
+  ProgresoEstatura,
+  ProgresoPeso,
+  ProgresoPresionArterial,
+  ProgresoTemperatura,
+  ProgresoFrecuenciaCardiaca,
+  ProgresoFrecuenciaRespiratoria,
 } from "../models/models.js";
 
 router.get("/refresh-db", async (req, res) => {
@@ -986,6 +992,14 @@ router.post("/addPatient/:doctorID", authRequired, async (req, res) => {
       transaction: t,
     });
 
+    //Insertar los progresos
+    await ProgresoEstatura.create({ idExamenFisico: examenFisico.id, Estatura: examenFisicoPayload.Estatura }, { transaction: t });
+    await ProgresoPeso.create({ idExamenFisico: examenFisico.id, Peso: examenFisicoPayload.Peso }, { transaction: t });
+    await ProgresoPresionArterial.create({ idExamenFisico: examenFisico.id, PresionArterial: examenFisicoPayload.Presion_arterial }, { transaction: t });
+    await ProgresoTemperatura.create({ idExamenFisico: examenFisico.id, Temperatura: examenFisicoPayload.Temperatura }, { transaction: t });
+    await ProgresoFrecuenciaCardiaca.create({ idExamenFisico: examenFisico.id, FrecuenciaCardiaca: examenFisicoPayload.Frecuencia_cardiaca }, { transaction: t });
+    await ProgresoFrecuenciaRespiratoria.create({ idExamenFisico: examenFisico.id, FrecuenciaRespiratoria: examenFisicoPayload.Frecuencia_respiratoria }, { transaction: t });
+
     const historial_clinico_payload = {
       idPaciente: patient.id,
       idHistoriaMedica: historiaMedica.id,
@@ -1892,14 +1906,47 @@ router.put("/editExamenFisico/:idEF", authRequired, async (req, res) => {
     where: { id: idEF },
   });
 
-  if (!examenFisico)
-    return res.status(404).send({ message: "ExamenF fisico not found" });
+  const t = await sequelize.transaction();
 
-  const updatedExamenFisico = await ExamenFisico.update(parametros, {
-    where: { id: idEF },
-  });
+  try {
+    //Guardar las metricas en las tablas de progreso, verificando que no sean el mismo valor
+    if (examenFisico.Peso !== parseInt(parametros.Peso)) {
+      await ProgresoPeso.create({ Peso: parametros.Peso, idExamenFisico: examenFisico.id }, { transaction: t });
+    }
 
-  res.status(200).send(updatedExamenFisico);
+    if (examenFisico.Estatura !== parseInt(parametros.Estatura)) {
+      await ProgresoEstatura.create({ Estatura: parametros.Estatura, idExamenFisico: examenFisico.id }, { transaction: t });
+    }
+
+    if (examenFisico.Presion_arterial !== parametros.Presion_arterial) {
+      await ProgresoPresionArterial.create({ Presion_arterial: parametros.Presion_arterial, idExamenFisico: examenFisico.id }, { transaction: t });
+    }
+
+    if (examenFisico.Frecuencia_cardiaca !== parseInt(parametros.Frecuencia_cardiaca)) {
+      await ProgresoFrecuenciaCardiaca.create({ Frecuencia_cardiaca: parametros.Frecuencia_cardiaca, idExamenFisico: examenFisico.id }, { transaction: t });
+    }
+
+    if (examenFisico.Frecuencia_respiratoria !== parseInt(parametros.Frecuencia_respiratoria)) {
+      await ProgresoFrecuenciaRespiratoria.create({ Frecuencia_respiratoria: parametros.Frecuencia_respiratoria, idExamenFisico: examenFisico.id }, { transaction: t });
+    }
+
+    if (examenFisico.Temperatura !== parametros.Temperatura) {
+      await ProgresoTemperatura.create({ Temperatura: parametros.Temperatura, idExamenFisico: examenFisico.id }, { transaction: t });
+    }
+
+    if (!examenFisico)
+      return res.status(404).send({ message: "ExamenF fisico not found" });
+
+    const updatedExamenFisico = await ExamenFisico.update(parametros, {
+      where: { id: idEF }, transaction: t
+    });
+
+    await t.commit();
+    res.status(200).send(updatedExamenFisico);
+  } catch (error) {
+    await t.rollback();
+    res.status(500).json({ message: error });
+  }
 });
 
 router.post("/addHistoriaClinicaActual", authRequired, async (req, res) => {
@@ -2263,5 +2310,53 @@ router.get("/recipePDF/:idReceta", async (req, res) => {
   })
 });
 
+//Metricas
+router.get("/getMetricas/:idPaciente", authRequired, async (req, res) => {
+  const { idPaciente } = req.params;
+
+  //Obtener el historial clinico del paciente
+
+  const historial_clinico = await HistorialClinico.findOne({
+    where: { idPaciente },
+  });
+
+  const metricas = await ExamenFisico.findOne({
+    where: { id: historial_clinico.idExamenFisico },
+    include: [
+      {
+        model: ProgresoPeso,
+        required: false,
+        attributes: ["Peso"],
+      },
+      {
+        model: ProgresoEstatura,
+        required: false,
+        attributes: ["Estatura"],
+      },
+      {
+        model: ProgresoPresionArterial,
+        required: false,
+        attributes: ["Presion_arterial"],
+      },
+      {
+        model: ProgresoFrecuenciaCardiaca,
+        required: false,
+        attributes: ["Frecuencia_cardiaca"],
+      },
+      {
+        model: ProgresoFrecuenciaRespiratoria,
+        required: false,
+        attributes: ["Frecuencia_respiratoria"],
+      },
+      {
+        model: ProgresoTemperatura,
+        required: false,
+        attributes: ["Temperatura"],
+      },
+    ],
+  });
+
+  res.status(200).json(metricas);
+});
 
 export default router;

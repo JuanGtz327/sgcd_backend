@@ -396,6 +396,168 @@ ExamenFisico.init(
   }
 );
 
+export class ProgresoPeso extends Model { }
+
+ProgresoPeso.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+      allowNull: false,
+    },
+    idExamenFisico: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    Peso: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+  },
+  {
+    tableName: "progreso_peso",
+    sequelize,
+    modelName: "ProgresoPeso",
+  }
+);
+
+export class ProgresoEstatura extends Model { }
+
+ProgresoEstatura.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+      allowNull: false,
+    },
+
+    idExamenFisico: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    Estatura: {
+      type: DataTypes.DOUBLE,
+      allowNull: false,
+    },
+  },
+  {
+    tableName: "progreso_estatura",
+    sequelize,
+    modelName: "ProgresoEstatura",
+  }
+);
+
+export class ProgresoPresionArterial extends Model { }
+
+ProgresoPresionArterial.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+      allowNull: false,
+    },
+
+    idExamenFisico: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    Presion_arterial: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+  },
+  {
+    tableName: "progreso_presion_arterial",
+    sequelize,
+    modelName: "ProgresoPresionArterial",
+  }
+);
+
+export class ProgresoFrecuenciaCardiaca extends Model { }
+
+ProgresoFrecuenciaCardiaca.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+      allowNull: false,
+    },
+
+    idExamenFisico: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    Frecuencia_cardiaca: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+  },
+  {
+    tableName: "progreso_frecuencia_cardiaca",
+    sequelize,
+    modelName: "ProgresoFrecuenciaCardiaca",
+  }
+);
+
+export class ProgresoFrecuenciaRespiratoria extends Model { }
+
+ProgresoFrecuenciaRespiratoria.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+      allowNull: false,
+    },
+
+    idExamenFisico: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    Frecuencia_respiratoria: {
+      type: DataTypes.INTEGER,
+
+      allowNull: false,
+    },
+  },
+  {
+    tableName: "progreso_frecuencia_respiratoria",
+    sequelize,
+    modelName: "ProgresoFrecuenciaRespiratoria",
+  }
+);
+
+export class ProgresoTemperatura extends Model { }
+
+ProgresoTemperatura.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+      allowNull: false,
+    },
+
+    idExamenFisico: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    Temperatura: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: false,
+    },
+  },
+  {
+    tableName: "progreso_temperatura",
+    sequelize,
+    modelName: "ProgresoTemperatura",
+  }
+);
+
 export class HistorialClinico extends Model { }
 
 HistorialClinico.init(
@@ -471,7 +633,6 @@ HistoriaClinicaActual.init(
     }
   }
 );
-
 
 export class Nota extends Model { }
 
@@ -725,6 +886,24 @@ HistorialClinico.belongsTo(HistoriaMedica, { foreignKey: "idHistoriaMedica" });
 
 ExamenFisico.hasOne(HistorialClinico, { foreignKey: "idExamenFisico", onDelete: "CASCADE" });
 HistorialClinico.belongsTo(ExamenFisico, { foreignKey: "idExamenFisico" });
+
+ExamenFisico.hasMany(ProgresoPeso, { foreignKey: "idExamenFisico", onDelete: "CASCADE" });
+ProgresoPeso.belongsTo(ExamenFisico, { foreignKey: "idExamenFisico" });
+
+ExamenFisico.hasMany(ProgresoEstatura, { foreignKey: "idExamenFisico", onDelete: "CASCADE" });
+ProgresoEstatura.belongsTo(ExamenFisico, { foreignKey: "idExamenFisico" });
+
+ExamenFisico.hasMany(ProgresoPresionArterial, { foreignKey: "idExamenFisico", onDelete: "CASCADE" });
+ProgresoPresionArterial.belongsTo(ExamenFisico, { foreignKey: "idExamenFisico" });
+
+ExamenFisico.hasMany(ProgresoFrecuenciaCardiaca, { foreignKey: "idExamenFisico", onDelete: "CASCADE" });
+ProgresoFrecuenciaCardiaca.belongsTo(ExamenFisico, { foreignKey: "idExamenFisico" });
+
+ExamenFisico.hasMany(ProgresoFrecuenciaRespiratoria, { foreignKey: "idExamenFisico", onDelete: "CASCADE" });
+ProgresoFrecuenciaRespiratoria.belongsTo(ExamenFisico, { foreignKey: "idExamenFisico" });
+
+ExamenFisico.hasMany(ProgresoTemperatura, { foreignKey: "idExamenFisico", onDelete: "CASCADE" });
+ProgresoTemperatura.belongsTo(ExamenFisico, { foreignKey: "idExamenFisico" });
 
 HistorialClinico.hasMany(HistoriaClinicaActual, { foreignKey: "idHistorialClinico", onDelete: "CASCADE" });
 HistoriaClinicaActual.belongsTo(HistorialClinico, { foreignKey: "idHistorialClinico" });
