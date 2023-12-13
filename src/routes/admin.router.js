@@ -995,10 +995,10 @@ router.post("/addPatient/:doctorID", authRequired, async (req, res) => {
     //Insertar los progresos
     await ProgresoEstatura.create({ idExamenFisico: examenFisico.id, Estatura: examenFisicoPayload.Estatura }, { transaction: t });
     await ProgresoPeso.create({ idExamenFisico: examenFisico.id, Peso: examenFisicoPayload.Peso }, { transaction: t });
-    await ProgresoPresionArterial.create({ idExamenFisico: examenFisico.id, PresionArterial: examenFisicoPayload.Presion_arterial }, { transaction: t });
+    await ProgresoPresionArterial.create({ idExamenFisico: examenFisico.id, Presion_arterial: examenFisicoPayload.Presion_arterial }, { transaction: t });
     await ProgresoTemperatura.create({ idExamenFisico: examenFisico.id, Temperatura: examenFisicoPayload.Temperatura }, { transaction: t });
-    await ProgresoFrecuenciaCardiaca.create({ idExamenFisico: examenFisico.id, FrecuenciaCardiaca: examenFisicoPayload.Frecuencia_cardiaca }, { transaction: t });
-    await ProgresoFrecuenciaRespiratoria.create({ idExamenFisico: examenFisico.id, FrecuenciaRespiratoria: examenFisicoPayload.Frecuencia_respiratoria }, { transaction: t });
+    await ProgresoFrecuenciaCardiaca.create({ idExamenFisico: examenFisico.id, Frecuencia_cardiaca: examenFisicoPayload.Frecuencia_cardiaca }, { transaction: t });
+    await ProgresoFrecuenciaRespiratoria.create({ idExamenFisico: examenFisico.id, Frecuencia_respiratoria: examenFisicoPayload.Frecuencia_respiratoria }, { transaction: t });
 
     const historial_clinico_payload = {
       idPaciente: patient.id,

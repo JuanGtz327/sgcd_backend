@@ -432,7 +432,6 @@ ProgresoEstatura.init(
       autoIncrement: true,
       allowNull: false,
     },
-
     idExamenFisico: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -459,7 +458,6 @@ ProgresoPresionArterial.init(
       autoIncrement: true,
       allowNull: false,
     },
-
     idExamenFisico: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -486,7 +484,6 @@ ProgresoFrecuenciaCardiaca.init(
       autoIncrement: true,
       allowNull: false,
     },
-
     idExamenFisico: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -513,14 +510,12 @@ ProgresoFrecuenciaRespiratoria.init(
       autoIncrement: true,
       allowNull: false,
     },
-
     idExamenFisico: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
     Frecuencia_respiratoria: {
       type: DataTypes.INTEGER,
-
       allowNull: false,
     },
   },
@@ -541,7 +536,6 @@ ProgresoTemperatura.init(
       autoIncrement: true,
       allowNull: false,
     },
-
     idExamenFisico: {
       type: DataTypes.INTEGER,
       allowNull: false,
