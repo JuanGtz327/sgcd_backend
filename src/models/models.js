@@ -377,7 +377,7 @@ ExamenFisico.init(
       allowNull: false,
     },
     Temperatura: {
-      type: DataTypes.DECIMAL(5, 2),
+      type: DataTypes.DECIMAL(5, 1),
       allowNull: false,
     },
     Grupo_sanguineo: {

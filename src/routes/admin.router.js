@@ -486,7 +486,7 @@ router.get("/getPatientDoctors/:idPaciente", authRequired, async (req, res) => {
     include: [
       {
         model: User,
-        attributes: ["Correo", "idClinica"],
+        attributes: ["Correo", "idClinica", "is_active"],
         required: true,
         where: { idClinica: req.user.idClinica },
       },
