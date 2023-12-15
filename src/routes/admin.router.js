@@ -10,7 +10,8 @@ const router = express.Router();
 import sequelize from "../db.js";
 import { Op } from "sequelize";
 import { decrypt, encrypt } from "../libs/cipher.js";
-
+import { sendMail } from "../libs/mails.js";
+import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { authRequired } from "../middlewares/validateToken.js";
 import { horaEnRangoDayJS, tieneDosHorasDeDiferencia } from '../libs/libs.js'
@@ -2357,6 +2358,46 @@ router.get("/getMetricas/:idPaciente", authRequired, async (req, res) => {
   });
 
   res.status(200).json(metricas);
+});
+
+//Para contraseñas olvidadas
+
+router.post("/forgotPassword", async (req, res) => {
+
+  console.log(req.body);
+
+  const { Correo } = req.body;
+
+  const user = await User.findOne({ where: { Correo } });
+
+  if (!user) return res.status(404).json({ message: "Correo no encontrado" });
+
+  const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+  const url = `${process.env.CLIENT_URL}/resetPassword?token=${token}`;
+
+  sendMail(Correo, url);
+
+  res.status(200).json({ message: "Correo enviado" });
+});
+
+router.post("/resetPassword", async (req, res) => {
+
+  const { token, Password } = req.body;
+
+  if (!token) return res.status(400).json({ message: "Token invalido" });
+
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+  const user = await User.findOne({ where: { id: decoded.id } });
+
+  if (!user) return res.status(404).json({ message: "Usuario no encontrado" });
+
+  const hashedPassword = await bcrypt.hash(Password, 10);
+
+  await User.update({ Password: hashedPassword }, { where: { id: decoded.id } });
+
+  res.status(200).json({ message: "Contraseña actualizada" });
 });
 
 export default router;
