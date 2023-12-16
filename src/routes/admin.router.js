@@ -81,6 +81,45 @@ router.get("/metricas", async (req, res) => {
   });
 });
 
+router.get("/listaDoctores", async (req, res) => {
+  //Listar nombres de doctores y sus especialidades y correo
+
+  const doctors = await Doctor.findAll({
+    attributes: ["id", "Nombre", "ApellidoP", "ApellidoM", "Especialidad"],
+    include: [
+      {
+        model: User,
+        attributes: ["Correo"],
+        required: true,
+      },
+      {
+        model: Domicilio,
+        attributes: ["Telefono"],
+        required: true,
+      }
+    ],
+  });
+
+  res.status(200).json(doctors);
+});
+
+router.get("/listaPacientes", async (req, res) => {
+  //Listar nombres de pacientes y sus correos
+
+  const patients = await Paciente.findAll({
+    attributes: ["id", "Nombre", "ApellidoP", "ApellidoM"],
+    include: [
+      {
+        model: User,
+        attributes: ["Correo"],
+        required: true,
+      },
+    ],
+  });
+
+  res.status(200).json(patients);
+});
+
 router.get("/pruebahistorial", async (req, res) => {
   const a = await HistorialClinico.findAll({
     attributes: ["id"],
