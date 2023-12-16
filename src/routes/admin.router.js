@@ -1080,19 +1080,37 @@ router.post("/addPatient/:doctorID", authRequired, async (req, res) => {
       await Nota.bulkCreate(notes, { transaction: t });
     }
 
-    //Comprobar password del doctor
-    const doctor = await Doctor.findOne({
-      where: { id: idDoctor },
-      include: [{ model: User }],
-    });
-    const isPasswordValid = await bcrypt.compare(
-      PasswordDoctor,
-      doctor.User.Password
-    );
+    //Si es admin verificar la contraseña del admin
 
-    if (!isPasswordValid) {
-      await t.rollback();
-      return res.status(400).json({ message: "La firma no es valida" });
+    if (req.user.is_admin) {
+      const admin = await User.findOne({
+        where: { id: req.user.id },
+      });
+
+      const isPasswordValid = await bcrypt.compare(
+        PasswordDoctor,
+        admin.Password
+      );
+
+      if (!isPasswordValid) {
+        await t.rollback();
+        return res.status(400).json({ message: "La contraseña del admin no es valida" });
+      }
+    } else {
+      //Comprobar password del doctor
+      const doctor = await Doctor.findOne({
+        where: { id: idDoctor },
+        include: [{ model: User }],
+      });
+      const isPasswordValid = await bcrypt.compare(
+        PasswordDoctor,
+        doctor.User.Password
+      );
+
+      if (!isPasswordValid) {
+        await t.rollback();
+        return res.status(400).json({ message: "La contraseña del doctor no es valida" });
+      }
     }
 
     await t.commit();
