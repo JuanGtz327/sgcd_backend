@@ -57,6 +57,7 @@ router.get("/refresh-db", async (req, res) => {
     res.send("DB refreshed");
   } catch (error) {
     res.send(JSON.stringify(error));
+    console.log(error);
   }
 });
 
@@ -347,10 +348,12 @@ router.post("/addDoctor", authRequired, async (req, res) => {
     const userExists = await User.findOne({
       where: { Correo: parametros.Correo },
     });
-    if (userExists)
+    if (userExists) {
+      await t.rollback();
       return res
         .status(400)
         .json({ message: "La direccion de correo ya esta en uso" });
+    }
 
     //Guardar las configuraciones del doctor
 
@@ -560,11 +563,16 @@ router.put("/editDoctor/:idDoc", authRequired, async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-    if (!idDoc)
+    if (!idDoc) {
+      await t.rollback();
       return res.status(400).send({ message: "You must provide an Id_Doctor" });
+    }
 
     const doctor = await Doctor.findOne({ where: { id: idDoc }, include: [{ model: Domicilio }] });
-    if (!doctor) return res.status(404).send({ message: "Doctor not found" });
+    if (!doctor) {
+      await t.rollback();
+      return res.status(404).send({ message: "Doctor not found" });
+    }
 
     //Actualizar el usuario con el correo del doctor si se paso como parametro
 
@@ -618,13 +626,19 @@ router.put("/editDoctor/:idDoc", authRequired, async (req, res) => {
     if (parametros.Password) {
       const passwordHash = await bcrypt.hash(parametros.Password, 10);
       const user = await User.findOne({ where: { id: doctor.idUser } });
-      if (!user) return res.status(404).send({ message: "User not found" });
+      if (!user) {
+        await t.rollback();
+        return res.status(404).send({ message: "User not found" });
+      }
       await User.update({ Password: passwordHash }, { where: { id: user.id }, transaction: t });
     }
 
     if (parametros.DomicilioPayload) {
       const domicilio = await Domicilio.findOne({ where: { id: doctor.idDomicilio } });
-      if (!domicilio) return res.status(404).send({ message: "Domicilio not found" });
+      if (!domicilio) {
+        await t.rollback();
+        return res.status(404).send({ message: "Domicilio not found" });
+      }
       await Domicilio.update(parametros.DomicilioPayload, { where: { id: domicilio.id }, transaction: t });
     }
 
@@ -644,14 +658,22 @@ router.put("/editDoctorConfigs/:idDoc", authRequired, async (req, res) => {
   const t = await sequelize.transaction();
 
   try {
-    if (!idDoc)
+    if (!idDoc) {
+      await t.rollback();
       return res.status(400).send({ message: "You must provide an Id_Doctor" });
+    }
 
     const doctor = await Doctor.findOne({ where: { id: idDoc } });
-    if (!doctor) return res.status(404).send({ message: "Doctor not found" });
+    if (!doctor) {
+      await t.rollback();
+      return res.status(404).send({ message: "Doctor not found" });
+    }
 
     const configuraciones = await Configuraciones.findOne({ where: { id: doctor.idConfiguraciones } });
-    if (!configuraciones) return res.status(404).send({ message: "Configuraciones not found" });
+    if (!configuraciones) {
+      await t.rollback();
+      return res.status(404).send({ message: "Configuraciones not found" });
+    }
 
     //Checar que no haya citas agendadas en dias que se quieren eliminar
 
@@ -910,7 +932,10 @@ router.put("/editProfile", authRequired, async (req, res) => {
   try {
     const user = await User.findOne({ where: { id } });
 
-    if (!user) return res.status(404).send({ message: "User not found" });
+    if (!user) {
+      await t.rollback();
+      return res.status(404).send({ message: "User not found" });
+    }
 
     if (!user.is_admin && user.is_doctor) {
       await Doctor.update(NombrePayload, { where: { idUser: id }, transaction: t });
@@ -956,8 +981,10 @@ router.post("/addPatient/:doctorID", authRequired, async (req, res) => {
 
   const t = await sequelize.transaction();
   try {
-    if (!idDoctor)
+    if (!idDoctor) {
+      await t.rollback();
       return res.status(400).send({ message: "You must provide an Id_Doctor" });
+    }
 
     const userExists = await User.findOne({
       where: { Correo: Correo },
@@ -1474,6 +1501,7 @@ router.post("/addCita", authRequired, async (req, res) => {
     });
 
     if (citaAgendada) {
+      await t.rollback();
       return res.status(400).json({ message: `Ya tiene agendada una cita con ${citaAgendada.DocPac.Paciente.Nombre} ${citaAgendada.DocPac.Paciente.ApellidoP}` });
     }
 
@@ -1566,6 +1594,7 @@ router.post("/addCitaAdmin", authRequired, async (req, res) => {
     });
 
     if (citaAgendada) {
+      await t.rollback();
       return res.status(400).json({ message: `El doctor ya tiene agendada una cita con ${citaAgendada.DocPac.Paciente.Nombre} ${citaAgendada.DocPac.Paciente.ApellidoP}` });
     }
 
@@ -1609,6 +1638,7 @@ router.post("/addPatientCita", authRequired, async (req, res) => {
     });
 
     if (citaAgendada) {
+      await t.rollback();
       return res.status(400).json({ message: `Ya tiene agendada una cita con ${citaAgendada.DocPac.Doctor.Nombre} ${citaAgendada.DocPac.Doctor.ApellidoP}` });
     }
 
@@ -1820,7 +1850,10 @@ router.post("/cancelCita", authRequired, async (req, res) => {
   try {
     const cita = await Cita.findOne({ where: { id } });
 
-    if (!cita) return res.status(404).json({ message: "Cita not found" });
+    if (!cita) {
+      await t.rollback();
+      return res.status(404).json({ message: "Cita not found" });
+    }
 
     const cancelacionPayload = {
       idCita: cita.id,
@@ -1847,13 +1880,22 @@ router.post("/cancelConfirmCita", authRequired, async (req, res) => {
   try {
     const cita = await Cita.findOne({ where: { id: idCita } });
 
-    if (!cita) return res.status(404).json({ message: "Cita not found" });
+    if (!cita) {
+      await t.rollback();
+      return res.status(404).json({ message: "Cita not found" });
+    }
 
     const citaCancelada = await CancelacionCita.findOne({ where: { idCita } });
 
-    if (!citaCancelada) return res.status(404).json({ message: "Cancelacion not found" });
+    if (!citaCancelada) {
+      await t.rollback();
+      return res.status(404).json({ message: "Cancelacion not found" });
+    }
 
-    if (citaCancelada.Pendiente === false) return res.status(400).json({ message: "La cita ya fue cancelada" });
+    if (citaCancelada.Pendiente === false) {
+      await t.rollback();
+      return res.status(400).json({ message: "La cita ya fue cancelada" });
+    }
 
     await CancelacionCita.update({ Pendiente: false }, { where: { idCita }, transaction: t });
 
@@ -1879,7 +1921,10 @@ router.put("/editCita", authRequired, async (req, res) => {
     //Si la esta consultando un administrador o un paciente, verificar cual era el id de doctor anterior
     if (req.user.is_admin || !req.user.is_doctor) {
       const citaAdminPac = await Cita.findOne({ where: { id }, include: [{ model: DocPac, required: true }] });
-      if (!citaAdminPac) return res.status(404).json({ message: "Cita not found" });
+      if (!citaAdminPac) {
+        await t.rollback();
+        return res.status(404).json({ message: "Cita not found" });
+      }
       citaAgendada = await Cita.findOne({
         where: { Fecha, Estado: true },
         include: [{
@@ -1892,12 +1937,16 @@ router.put("/editCita", authRequired, async (req, res) => {
     }
 
     if (citaAgendada) {
+      await t.rollback();
       return res.status(400).json({ message: `Ya tiene agendada una cita con ${citaAgendada.DocPac.Paciente.Nombre} ${citaAgendada.DocPac.Paciente.ApellidoP}` });
     }
 
     const cita = await Cita.findOne({ where: { id } });
 
-    if (!cita) return res.status(404).json({ message: "Cita not found" });
+    if (!cita) {
+      await t.rollback();
+      return res.status(404).json({ message: "Cita not found" });
+    }
 
     await Cita.update({ Fecha, Diagnostico }, { where: { id } });
 
@@ -1992,8 +2041,10 @@ router.put("/editExamenFisico/:idEF", authRequired, async (req, res) => {
       await ProgresoTemperatura.create({ Temperatura: parametros.Temperatura, idExamenFisico: examenFisico.id }, { transaction: t });
     }
 
-    if (!examenFisico)
+    if (!examenFisico) {
+      await t.rollback();
       return res.status(404).send({ message: "ExamenF fisico not found" });
+    }
 
     const updatedExamenFisico = await ExamenFisico.update(parametros, {
       where: { id: idEF }, transaction: t
@@ -2068,7 +2119,10 @@ router.put("/editClinica", authRequired, async (req, res) => {
   try {
     const clinica = await Clinica.findOne({ where: { id: req.user.idClinica } });
 
-    if (!clinica) return res.status(404).send({ message: "Clinica not found" });
+    if (!clinica) {
+      await t.rollback();
+      return res.status(404).send({ message: "Clinica not found" });
+    }
 
     await Clinica.update(parametros.clinicaPayload, { where: { id: req.user.idClinica }, transaction: t });
 
@@ -2120,6 +2174,7 @@ router.post("/addReceta", authRequired, async (req, res) => {
     );
 
     if (!isPasswordValid) {
+      await t.rollback();
       return res.status(400).json({ message: "La contraseña es invalida" });
     }
 
