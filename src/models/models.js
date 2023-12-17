@@ -301,23 +301,23 @@ HistoriaMedica.init(
       allowNull: false,
     },
     Enfermedades_hereditarias: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: false,
     },
     Enfermedades_previas: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: false,
     },
     Cirugias: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: false,
     },
     Alergias: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: false,
     },
     Traumatismos: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: false,
     },
     Vacunas: {
@@ -325,7 +325,7 @@ HistoriaMedica.init(
       allowNull: false,
     },
     Habitos_salud: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: false,
     },
   },
@@ -593,19 +593,19 @@ HistoriaClinicaActual.init(
       allowNull: false,
     },
     Motivo_consulta: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: false,
     },
     Sintomas: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: false,
     },
     Fecha_inicio_sintomas: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: false,
     },
     Plan_tratamiento: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: false,
     },
     idHistorialClinico: {
