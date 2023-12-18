@@ -1936,12 +1936,12 @@ router.put("/editCita", authRequired, async (req, res) => {
       citaAgendada = await Cita.findOne({ where: { Fecha, Estado: true }, include: [{ model: DocPac, where: { idDoctor: req.user.idDoctor }, include: [{ model: Paciente, required: true }] }] });
     }
 
-    if (citaAgendada) {
+    const cita = await Cita.findOne({ where: { id } });
+
+    if (citaAgendada && citaAgendada.id !== cita.id) {
       await t.rollback();
       return res.status(400).json({ message: `Ya tiene agendada una cita con ${citaAgendada.DocPac.Paciente.Nombre} ${citaAgendada.DocPac.Paciente.ApellidoP}` });
     }
-
-    const cita = await Cita.findOne({ where: { id } });
 
     if (!cita) {
       await t.rollback();
@@ -2510,6 +2510,39 @@ router.post("/resetPassword", async (req, res) => {
   await User.update({ Password: hashedPassword }, { where: { id: decoded.id } });
 
   res.status(200).json({ message: "Contraseña actualizada" });
+});
+
+
+//Clinicas
+
+router.get("/getClinicas", async (req, res) => {
+
+  //Obtener las clinicas y el numero de especialidades que tienen
+  const clinicas = await Clinica.findAll({
+    attributes: ["id", "Nombre"],
+    include: [
+      {
+        model: Domicilio,
+        required: true,
+        attributes: ["Calle", "Num_ext", "Colonia", "Municipio", "Estado", "CP"],
+      },
+      {
+        model: User,
+        required: true,
+        attributes: ["Correo"],
+        include: [
+          {
+            model: Doctor,
+            required: true,
+            attributes: ["Nombre", "ApellidoP", "ApellidoM", "Especialidad", "Genero"],
+          }
+        ]
+      }
+    ]
+  })
+
+  res.status(200).json(clinicas);
+
 });
 
 export default router;
