@@ -2545,4 +2545,81 @@ router.get("/getClinicas", async (req, res) => {
 
 });
 
+
+//Obtener las notas por id de paciente
+router.get("/getNotas/:idPaciente", authRequired, async (req, res) => {
+  const { idPaciente } = req.params;
+
+  const notas = await Nota.findAll({
+    include: [
+      {
+        model: DocPac,
+        required: true,
+        where: { idPaciente },
+        include: [
+          {
+            model: Doctor,
+            required: true,
+            include: [
+              {
+                model: User,
+                required: true,
+              },
+            ],
+          },
+        ],
+      }
+    ]
+  });
+
+  res.status(200).json(notas);
+});
+
+//Nueva nota
+
+router.post("/addNewNotaD", authRequired, async (req, res) => {
+  const { ...parametros } = req.body;
+
+  const t = await sequelize.transaction();
+
+  try {
+
+    const docpac = await DocPac.findOne({
+      where: { idDoctor: req.user.idDoctor, idPaciente: parametros.idPaciente },
+    });
+
+    if (!docpac) {
+      await t.rollback();
+      return res.status(404).json({ message: "Docpac not found" });
+    }
+
+    parametros.idDocPac = docpac.id;
+
+    //Buscar el historial clinico del paciente
+    const historial_clinico = await HistorialClinico.findOne({
+      where: { idPaciente: parametros.idPaciente },
+    });
+
+    if (!historial_clinico) {
+      await t.rollback();
+      return res.status(404).json({ message: "Historial clinico not found" });
+    }
+
+    parametros.idHistorialClinico = historial_clinico.id;
+
+    //Borrar los parametros que no se van a guardar en la nota
+    delete parametros.idPaciente;
+    delete parametros.idDoctor;
+
+    const nota = await Nota.create(parametros, { transaction: t });
+    await t.commit();
+    res.status(200).json(nota);
+  } catch (error) {
+    console.log(error);
+    await t.rollback();
+    res.status(500).json({ message: error });
+  }
+
+});
+
 export default router;
