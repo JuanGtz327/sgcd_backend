@@ -2126,12 +2126,12 @@ router.put("/editClinica", authRequired, async (req, res) => {
 
     await Clinica.update(parametros.clinicaPayload, { where: { id: req.user.idClinica }, transaction: t });
 
-    //Verificar si el numero de telefono ya esta en uso
+    //Verificar si el numero de telefono ya esta en uso y que no sea el mismo que el actual
     const telefonoExists = await Domicilio.findOne({
       where: { Telefono: parametros.domicilioPayload.Telefono },
     });
 
-    if (telefonoExists) {
+    if (telefonoExists && telefonoExists.id !== clinica.idDomicilio) {
       await t.rollback();
       return res.status(400).json({ message: "El numero de telefono ya esta en uso" });
     }
